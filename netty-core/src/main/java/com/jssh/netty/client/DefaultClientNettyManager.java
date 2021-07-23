@@ -70,7 +70,7 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
     public void stopConnection() {
         if (channelFuture != null) {
             try {
-                logger.info("close 5 {}", channelFuture);
+                logger.info("close {}", channelFuture);
                 channelFuture.channel().close();
             } catch (Exception e) {
             }
@@ -100,7 +100,7 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
 
     private void checkChannelFuture(ChannelFuture channelFuture) throws Exception {
         if (channelFuture.channel().localAddress().equals(channelFuture.channel().remoteAddress())) {
-            logger.info("close 4 {}", channelFuture);
+            logger.info("close {}", channelFuture);
             channelFuture.channel().close();
         }
     }
@@ -175,7 +175,7 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
     }
 
     @Override
-    protected void checkDataRequest(ChannelHandlerContext ctx, NettyRequest request) {
+    protected void checkActionRequest(ChannelHandlerContext ctx, NettyRequest request) {
 
     }
 

@@ -62,7 +62,7 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
         addNettyRequestFilter((chain, ctx, request) -> {
             ClientChannel clientChannel = getClientChannel(ctx);
             if (clientChannel != null) {
-                ((BaseNettyRequest) request).setClientInfo(clientChannel.getClientInfo());
+                request.setClientInfo(clientChannel.getClientInfo());
             }
         });
     }
@@ -100,10 +100,10 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
     }
 
     @Override
-    protected void checkDataRequest(ChannelHandlerContext ctx, NettyRequest request) {
+    protected void checkActionRequest(ChannelHandlerContext ctx, NettyRequest request) {
         ClientChannel clientChannel = getClientChannel(ctx);
         if (clientChannel == null || request.getClientInfo() == null) {
-            logger.error("close 6 {} {}", ctx, request);
+            logger.error("close {}", ctx);
             ctx.close();
         }
     }
@@ -129,14 +129,13 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
 
     @Override
     public void doConnectionRequest(ChannelHandlerContext ctx, NettyRequest request) {
-        // ClientInfo clientInfo = nettyService.validateClient(request.getParameters());
         logger.info("new connection {}", request);
-        ClientInfo<?> _clientInfo = null;
+        ClientInfo<?> _clientInfo;
         try {
             _clientInfo = clientValidator.validate(request.getHeader("clientInfo"));
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            logger.error("close 3 {} {}", getClientChannel(ctx), ctx, e.getMessage());
+            logger.info("close {}", ctx);
             ctx.close();
             return;
         }
@@ -145,7 +144,7 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
             for (ClientChannel client : channels.values()) {
                 if (Objects.equals(client.getClientInfo(), clientInfo) && !Objects.equals(client.getCtx(), ctx)) {
                     channels.remove(client.getCtx().channel().id().asLongText());
-                    logger.info("close 4 {}", client);
+                    logger.info("close {}", client);
                     client.getCtx().close();
                 }
             }
@@ -185,7 +184,7 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
                 }
             });
         } else {
-            logger.info("close 5 {} {}", getClientChannel(ctx), ctx);
+            logger.info("close {}", ctx);
             ctx.close();
         }
     }

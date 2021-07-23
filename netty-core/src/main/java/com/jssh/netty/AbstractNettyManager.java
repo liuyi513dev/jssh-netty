@@ -1,7 +1,5 @@
 package com.jssh.netty;
 
-import com.jssh.netty.request.*;
-import com.jssh.netty.ssl.SSLHandler;
 import com.jssh.netty.exception.BizException;
 import com.jssh.netty.exception.NettyException;
 import com.jssh.netty.exception.NetworkException;
@@ -13,8 +11,10 @@ import com.jssh.netty.handler.RequestHandler;
 import com.jssh.netty.handler.ReturnValue;
 import com.jssh.netty.listener.MessageListener;
 import com.jssh.netty.listener.NettyResponse;
+import com.jssh.netty.request.*;
 import com.jssh.netty.serial.ErrorObject;
 import com.jssh.netty.serial.MessageSerial;
+import com.jssh.netty.ssl.SSLHandler;
 import com.jssh.netty.support.NettyMessageDecoder;
 import com.jssh.netty.support.NettyMessageEncoder;
 import io.netty.channel.*;
@@ -122,7 +122,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     @Override
     public void stop() {
-        logger.info("close 6 ");
+        logger.info("shutdown netty");
         this.executor.shutdownNow();
         this.receiveWorker.shutdownNow();
         this.sendWorker.shutdownNow();
@@ -194,7 +194,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
     }
 
     public void doReceiveMessage(ChannelHandlerContext ctx, NettyRequest request) throws Exception {
-        if (dataHandleFilters != null && dataHandleFilters.size() > 0) {
+        if (dataHandleFilters.size() > 0) {
             NettyRequestChains chain = new NettyRequestChains(dataHandleFilters);
             chain.doFilter(ctx, request);
         }
@@ -205,20 +205,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
         String responseId = request.getResponseId();
         if (responseId != null) {
-            NettyResponse nettyResult = responseMap.get(responseId);
-            if (nettyResult != null) {
-                if (Objects.equals(request.getRequestAction(), ACK_REQUEST)) {
-                    nettyResult.setAck();
-                } else if (Objects.equals(request.getRequestAction(), ERROR_REQUEST)) {
-                    nettyResult.setError((ErrorObject) request.getBody());
-                    responseMap.remove(responseId);
-                } else if (Objects.equals(request.getRequestAction(), RESPONSE_REQUEST)) {
-                    nettyResult.setResult(request.getBody());
-                    responseMap.remove(responseId);
-                } else {
-                    // nothing
-                }
-            }
+            doResponseHandle(responseId, request);
             return;
         }
 
@@ -234,6 +221,26 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         doMessageHandle(ctx, request);
     }
 
+    protected void doResponseHandle(String responseId, NettyRequest request) throws Exception {
+        NettyResponse nettyResult = responseMap.get(responseId);
+        if (nettyResult != null) {
+            switch (request.getRequestAction()) {
+                case ACK_REQUEST:
+                    nettyResult.setAck();
+                    break;
+                case ERROR_REQUEST:
+                    nettyResult.setError((ErrorObject) request.getBody());
+                    responseMap.remove(responseId);
+                    break;
+                case RESPONSE_REQUEST:
+                    nettyResult.setResult(request.getBody());
+                    responseMap.remove(responseId);
+                    break;
+                default:
+            }
+        }
+    }
+
     protected void doMessageHandle(ChannelHandlerContext ctx, NettyRequest request) throws Exception {
         switch (request.getRequestAction()) {
             case PING_REQUEST:
@@ -246,7 +253,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 doConnectionRequest(ctx, request);
                 break;
             default:
-                doDataRequest(ctx, request);
+                doActionRequest(ctx, request);
         }
     }
 
@@ -262,9 +269,9 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     }
 
-    public void doDataRequest(ChannelHandlerContext ctx, NettyRequest request) {
+    public void doActionRequest(ChannelHandlerContext ctx, NettyRequest request) {
 
-        checkDataRequest(ctx, request);
+        checkActionRequest(ctx, request);
 
         ReturnValue responseValue = null;
         NettyRequest response = null;
@@ -283,6 +290,12 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         if (responseValue != null && responseValue.isReturn()) {
             response = RequestBuilder.builder().setResponseId(request.getRequestId()).setSyn(false).setAck(false)
                     .setRequestAction(RESPONSE_REQUEST).setBody(responseValue.getReturnValue()).build();
+        }
+
+        Boolean requireResponse = (Boolean) request.getHeader("requireResponse");
+        if (response == null && requireResponse != null && requireResponse) {
+            response = RequestBuilder.builder().setResponseId(request.getRequestId()).setSyn(false).setAck(false)
+                    .setRequestAction(RESPONSE_REQUEST).setBody(null).build();
         }
 
         if (response != null) {
@@ -323,11 +336,11 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
     @Override
     public void exception(ChannelHandlerContext ctx, Throwable cause) {
         logger.error(cause.getMessage(), cause);
-        logger.info("close 1 {}", ctx);
+        logger.info("close {}", ctx);
         ctx.close();
     }
 
-    protected void checkDataRequest(ChannelHandlerContext ctx, NettyRequest request) {
+    protected void checkActionRequest(ChannelHandlerContext ctx, NettyRequest request) {
     }
 
     public void sendMessage(NettyRequest request, MessageListener listener) {
@@ -447,15 +460,21 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
         boolean requireResponse = listenerExe.hasResponseListener();
 
+        if (requireResponse) {
+            Object r = request.getHeader("requireResponse");
+            if (r == null) {
+                request.putHeader("requireResponse", true);
+            }
+        }
+
         if ((ack || requireResponse) && requestId == null) {
             throw new BizException("requestId can't be null");
         }
 
-        final NettyResponse response = (ack || requireResponse) ? new NettyResponse(requestId, ack, requireResponse)
+        final NettyResponse response = (ack || requireResponse) ? new NettyResponse(requestId, ack, requireResponse, channel.id().asLongText())
                 : null;
 
         if (response != null) {
-            response.setChannelId(channel.id().asLongText());
             responseMap.put(requestId, response);
         }
 
@@ -607,7 +626,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     class NettyResultClean implements Runnable {
 
-        private int validTime;
+        private final int validTime;
 
         public NettyResultClean(int validTime) {
             this.validTime = validTime;
@@ -650,42 +669,24 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     private static class MessageListenerExecutor {
 
-        public List<MessageListener> listeners;
+        private final List<MessageListener> listeners;
+
+        private final boolean hasResponse;
+
+        private final boolean hasProgress;
 
         public MessageListenerExecutor(List<MessageListener> listeners) {
             this.listeners = listeners;
+            this.hasResponse = hasMethod("onResponse", Object.class);
+            this.hasProgress = hasMethod("onProgress", Object.class, long.class, long.class);
         }
 
         public boolean hasResponseListener() {
-            for (MessageListener listener : listeners) {
-                Method method = null;
-                try {
-                    method = listener.getClass().getDeclaredMethod("onResponse", Object.class);
-                } catch (Exception e) {
-                    // ignore;
-                }
-
-                if (method != null && !method.isDefault()) {
-                    return true;
-                }
-            }
-            return false;
+            return hasResponse;
         }
 
         public boolean hasProgressListener() {
-            for (MessageListener listener : listeners) {
-                Method method = null;
-                try {
-                    method = listener.getClass().getDeclaredMethod("onProgress", Object.class, long.class, long.class);
-                } catch (Exception e) {
-                    // ignore;
-                }
-
-                if (method != null && !method.isDefault()) {
-                    return true;
-                }
-            }
-            return false;
+            return hasProgress;
         }
 
         public void fireAck() {
@@ -716,6 +717,22 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             for (MessageListener listener : listeners) {
                 listener.onProgress(future, progress, total);
             }
+        }
+
+        private boolean hasMethod(String methodName, Class<?>... parameterTypes) {
+            for (MessageListener listener : listeners) {
+                Method method = null;
+                try {
+                    method = listener.getClass().getDeclaredMethod(methodName, parameterTypes);
+                } catch (Exception e) {
+                    // ignore;
+                }
+
+                if (method != null && !method.isDefault()) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

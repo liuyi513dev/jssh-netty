@@ -1,172 +1,148 @@
 package com.jssh.netty.listener;
 
-import java.util.Date;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import com.jssh.netty.exception.BizException;
 import com.jssh.netty.exception.NetworkException;
 import com.jssh.netty.exception.TimeoutException;
 import com.jssh.netty.serial.ErrorObject;
 
+import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 public class NettyResponse {
 
-	private boolean requireAck;
+    private final String requestId;
 
-	private boolean requireResponse;
+    private final CountDownLatch ackLatch;
 
-	private String requestId;
+    private final CountDownLatch responseLatch;
 
-	private CountDownLatch ackLatch;
+    private final String channelId;
 
-	private CountDownLatch responseLatch;
+    private final Date startTime;
 
-	private String channelId;
+    private Object result;
 
-	private Object result;
+    private ErrorObject error;
 
-	private ErrorObject error;
+    private NetworkException exception;
 
-	private NetworkException exception;
+    private boolean hasError;
 
-	private boolean hasError;
+    private boolean isAck;
 
-	private boolean isAck;
+    private boolean isResult;
 
-	private boolean isResult;
+    public NettyResponse(String requestId, boolean requireAck, boolean requireResponse, String channelId) {
+        this.requestId = requestId;
+        this.ackLatch = requireAck ? new CountDownLatch(1) : null;
+        this.responseLatch = requireResponse ? new CountDownLatch(1) : null;
+        this.startTime = new Date();
+        this.channelId = channelId;
+    }
 
-	private Date startTime;
+    public void waitForAck(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
+        ackLatch.await(timeout, unit);
 
-	public NettyResponse(String requestId, boolean requireAck, boolean requireResponse) {
-		this.requestId = requestId;
-		this.requireAck = requireAck;
-		this.requireResponse = requireResponse;
-		if (requireAck) {
-			this.ackLatch = new CountDownLatch(1);
-		}
-		if (requireResponse) {
-			this.responseLatch = new CountDownLatch(1);
-		}
-		this.startTime = new Date();
-	}
+        if (hasError) {
+            if (exception != null) {
+                throw exception;
+            }
+            throw new BizException("errorClass:" + error.getErrorClass() + ", errorMessage:" + error.getMessage());
+        }
 
-	public void waitForAck(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
-		ackLatch.await(timeout, unit);
+        if (!isAck) {
+            throw new TimeoutException("ack time out. " + requestId);
+        }
+    }
 
-		if (hasError) {
-			if (exception != null) {
-				throw exception;
-			}
-			throw new BizException("errorClass:" + error.getErrorClass() + ", errorMessage:" + error.getMessage());
-		}
+    public Object waitForResponse(long timeout, TimeUnit unit)
+            throws InterruptedException, TimeoutException, BizException, NetworkException {
 
-		if (!isAck) {
-			throw new TimeoutException("ack time out. " + requestId);
-		}
-	}
+        responseLatch.await(timeout, unit);
+        if (hasError) {
+            if (exception != null) {
+                throw exception;
+            }
+            throw new BizException("errorClass:" + error.getErrorClass() + ", errorMessage:" + error.getMessage());
+        }
+        if (!isResult) {
+            throw new TimeoutException("netty result read time out. " + requestId);
+        }
+        return result;
+    }
 
-	public Object waitForResponse(long timeout, TimeUnit unit)
-			throws InterruptedException, TimeoutException, BizException, NetworkException {
+    public Object getResult() {
+        return result;
+    }
 
-		responseLatch.await(timeout, unit);
-		if (hasError) {
-			if (exception != null) {
-				throw exception;
-			}
-			throw new BizException("errorClass:" + error.getErrorClass() + ", errorMessage:" + error.getMessage());
-		}
-		if (!isResult) {
-			throw new TimeoutException("netty result read time out. " + requestId);
-		}
-		return result;
-	}
+    public synchronized void setAck() {
+        if (isAck) {
+            return;
+        }
+        this.isAck = true;
+        ackLatch.countDown();
+    }
 
-	public Object getResult() {
-		return result;
-	}
+    public synchronized void setResult(Object result) {
+        if (isResult) {
+            return;
+        }
 
-	public synchronized void setAck() {
-		if (isAck) {
-			return;
-		}
-		this.isAck = true;
-		ackLatch.countDown();
-	}
+        this.result = result;
+        this.isResult = true;
 
-	public synchronized void setResult(Object result) {
-		if (isResult) {
-			return;
-		}
+        if (ackLatch != null) {
+            this.isAck = true;
+            ackLatch.countDown();
+        }
 
-		this.result = result;
-		this.isResult = true;
-		responseLatch.countDown();
+        responseLatch.countDown();
+    }
 
-		if(requireAck) {
-			this.isAck = true;
-			ackLatch.countDown();
-		}
-	}
+    public synchronized void setError(ErrorObject object) {
+        if (hasError) {
+            return;
+        }
 
-	public synchronized void setError(ErrorObject object) {
-		if (hasError) {
-			return;
-		}
+        this.error = object;
+        this.hasError = true;
 
-		this.error = object;
-		this.hasError = true;
-		
-		if(requireAck) {
-			ackLatch.countDown();
-		}
-		
-		if(requireResponse) {
-			responseLatch.countDown();
-		}
-	}
+        if (ackLatch != null) {
+            ackLatch.countDown();
+        }
 
-	public synchronized void setException(NetworkException exception) {
-		if (hasError) {
-			return;
-		}
+        if (responseLatch != null) {
+            responseLatch.countDown();
+        }
+    }
 
-		this.exception = exception;
-		this.hasError = true;
+    public synchronized void setException(NetworkException exception) {
+        if (hasError) {
+            return;
+        }
 
-		if(requireAck) {
-			ackLatch.countDown();
-		}
-		
-		if(requireResponse) {
-			responseLatch.countDown();
-		}
-	}
+        this.exception = exception;
+        this.hasError = true;
 
-	public String getChannelId() {
-		return channelId;
-	}
+        if (ackLatch != null) {
+            ackLatch.countDown();
+        }
 
-	public void setChannelId(String channelId) {
-		this.channelId = channelId;
-	}
+        if (responseLatch != null) {
+            responseLatch.countDown();
+        }
+    }
 
-	public String getRequestId() {
-		return requestId;
-	}
+    public String getChannelId() {
+        return channelId;
+    }
 
-	public void setRequestId(String requestId) {
-		this.requestId = requestId;
-	}
+    public String getRequestId() {
+        return requestId;
+    }
 
-	public Date getStartTime() {
-		return startTime;
-	}
-
-	public boolean isRequireAck() {
-		return requireAck;
-	}
-
-	public boolean isRequireResponse() {
-		return requireResponse;
-	}
+    public Date getStartTime() {
+        return startTime;
+    }
 }

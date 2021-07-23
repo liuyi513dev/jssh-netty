@@ -63,7 +63,6 @@ public class RequestBuilder implements Builder {
         return this;
     }
 
-
     public NettyRequest build() {
         SimpleNettyRequest request = new SimpleNettyRequest();
         request.setSyn(this.syn);
