@@ -5,8 +5,11 @@ import com.jssh.netty.request.Action;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ActionScannerProcessor {
 
@@ -51,16 +54,22 @@ public class ActionScannerProcessor {
             if (Modifier.isPublic(method.getModifiers()) && !method.isSynthetic()) {
                 Action methodAction = method.getAnnotation(Action.class);
                 if (classAction != null || methodAction != null) {
-                    String actionName = (classAction != null && !classAction.value().isEmpty() ?
-                            classAction.value() + "." : "")
-                            + (methodAction != null && !methodAction.value().isEmpty() ?
-                            methodAction.value() : method.getName());
+
+                    List<String> actions = methodAction != null && methodAction.value().length > 0 ?
+                            Arrays.asList(methodAction.value()) : Arrays.asList(method.getName());
+
+                    if (classAction != null && classAction.value().length > 0) {
+                        actions = actions.stream().flatMap(action -> Arrays.stream(classAction.value()).
+                                map(ca -> ca + "." + action)).collect(Collectors.toList());
+                    }
 
                     if (actionMapping == null) {
                         actionMapping = new HashMap<>(5);
                     }
 
-                    actionMapping.put(actionName, new ActionInvocation(method, target));
+                    for (String action : actions) {
+                        actionMapping.put(action, new ActionInvocation(method, target));
+                    }
                 }
             }
         }
