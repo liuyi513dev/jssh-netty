@@ -14,9 +14,9 @@ import java.util.List;
 
 public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
 
-    private boolean isBodyBuf;
-    private MessageSerial serial;
-    private MessageSerial bodySerial;
+    private final boolean isBodyBuf;
+    private final MessageSerial serial;
+    private final MessageSerial bodySerial;
 
     public NettyMessageEncoder() {
         this(true, null);
@@ -43,6 +43,7 @@ public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
 
         serial.serialize(buf, request.getSyn());
         serial.serialize(buf, request.getAck());
+        serial.serialize(buf, request.getRequired());
         serial.serialize(buf, request.getRequestAction());
         serial.serialize(buf, request.getRequestId());
         serial.serialize(buf, request.getResponseId());

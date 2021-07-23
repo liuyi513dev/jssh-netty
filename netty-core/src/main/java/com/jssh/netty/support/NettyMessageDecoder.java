@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings("unchecked")
 public class NettyMessageDecoder extends ByteToMessageDecoder {
 
     public static final byte TYPE_NULL = 0;
@@ -37,9 +36,9 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
 
     public static final byte TYPE_CUSTOM_SERIAL = 20;
 
-    private MessageSerial serial;
-    private MessageSerial bodySerial;
-    private boolean isBodyBuf;
+    private final MessageSerial serial;
+    private final MessageSerial bodySerial;
+    private final boolean isBodyBuf;
 
     private MessageDecoderHolder messageHolder;
 
@@ -76,6 +75,7 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
 
         builder.setSyn((Boolean) serial.deSerialize(in));
         builder.setAck((Boolean) serial.deSerialize(in));
+        builder.setRequired((Boolean) serial.deSerialize(in));
         builder.setRequestAction((String) serial.deSerialize(in));
         builder.setRequestId((String) serial.deSerialize(in));
         builder.setResponseId((String) serial.deSerialize(in));
@@ -117,9 +117,9 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
 
     static class MessageDecoderHolder {
 
-        private MessageSerial ser;
+        private final MessageSerial ser;
 
-        private BodyBufRequestBuilder builder;
+        private final BodyBufRequestBuilder builder;
 
         public MessageDecoderHolder(MessageSerial ser, BodyBufRequestBuilder builder) {
             this.ser = ser;

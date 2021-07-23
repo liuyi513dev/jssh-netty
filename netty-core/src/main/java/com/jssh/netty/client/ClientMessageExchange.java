@@ -13,9 +13,9 @@ public interface ClientMessageExchange extends NettyManager {
         sendMessage(request, false, listener);
     }
 
-    default void sendMessage(String requestAction, boolean sync, HeaderList headers, Object body,
-                             boolean reSendOnNetWorkException, boolean isAck, MessageListener listener) {
-        sendMessage(RequestBuilder.builder().setSyn(sync).setAck(isAck).setRequestAction(requestAction)
+    default void sendMessage(String requestAction, boolean syn, HeaderList headers, Object body,
+                             boolean reSendOnNetWorkException, boolean ack, MessageListener listener) {
+        sendMessage(RequestBuilder.builder().setSyn(syn).setAck(ack).setRequestAction(requestAction)
                 .setHeaders(headers).setBody(body).build(), reSendOnNetWorkException, listener);
     }
 

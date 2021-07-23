@@ -6,9 +6,11 @@ import java.util.Objects;
 
 public abstract class BaseNettyRequest implements NettyRequest {
 
-    private Boolean syn;
+    private boolean syn;
 
-    private Boolean ack;
+    private boolean ack;
+
+    private boolean required;
 
     private String requestAction;
 
@@ -28,6 +30,7 @@ public abstract class BaseNettyRequest implements NettyRequest {
     public BaseNettyRequest(NettyRequest request) {
         this.syn = request.getSyn();
         this.ack = request.getAck();
+        this.required = request.getRequired();
         this.requestAction = request.getRequestAction();
         this.requestId = request.getRequestId();
         this.responseId = request.getResponseId();
@@ -36,23 +39,33 @@ public abstract class BaseNettyRequest implements NettyRequest {
     }
 
     @Override
-    public Boolean getSyn() {
+    public boolean getSyn() {
         return syn;
     }
 
     @Override
-    public void setSyn(Boolean syn) {
+    public void setSyn(boolean syn) {
         this.syn = syn;
     }
 
     @Override
-    public Boolean getAck() {
+    public boolean getAck() {
         return ack;
     }
 
     @Override
-    public void setAck(Boolean ack) {
+    public void setAck(boolean ack) {
         this.ack = ack;
+    }
+
+    @Override
+    public boolean getRequired() {
+        return required;
+    }
+
+    @Override
+    public void setRequired(boolean required) {
+        this.required = required;
     }
 
     @Override
@@ -137,7 +150,7 @@ public abstract class BaseNettyRequest implements NettyRequest {
 
     @Override
     public String toString() {
-        return "[" + (syn != null ? "syn=" + syn + ", " : "") + (ack != null ? "ack=" + ack + ", " : "")
+        return "[" + (syn ? "syn, " : "") + (ack ? "ack, " : "") + (required ? "required, " : "")
                 + (requestAction != null ? "requestAction=" + requestAction + ", " : "")
                 + (requestId != null ? "requestId=" + requestId + ", " : "")
                 + (responseId != null ? "responseId=" + responseId + ", " : "")

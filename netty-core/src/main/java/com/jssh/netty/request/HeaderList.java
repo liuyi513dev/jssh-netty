@@ -25,7 +25,7 @@ public class HeaderList {
 
     @Override
     public String toString() {
-        return headers != null && headers.size() > 0 ? "HeaderList{" +
+        return headers != null && headers.size() > 0 ? "{" +
                 headers +
                 '}' : "";
     }

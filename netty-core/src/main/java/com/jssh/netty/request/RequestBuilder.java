@@ -2,9 +2,11 @@ package com.jssh.netty.request;
 
 public class RequestBuilder implements Builder {
 
-    private Boolean syn;
+    private boolean syn;
 
-    private Boolean ack;
+    private boolean ack;
+
+    private boolean required;
 
     private String requestAction;
 
@@ -20,13 +22,18 @@ public class RequestBuilder implements Builder {
         return new RequestBuilder();
     }
 
-    public RequestBuilder setSyn(Boolean syn) {
+    public RequestBuilder setSyn(boolean syn) {
         this.syn = syn;
         return this;
     }
 
-    public RequestBuilder setAck(Boolean ack) {
+    public RequestBuilder setAck(boolean ack) {
         this.ack = ack;
+        return this;
+    }
+
+    public RequestBuilder setRequired(boolean required) {
+        this.required = required;
         return this;
     }
 
@@ -67,6 +74,7 @@ public class RequestBuilder implements Builder {
         SimpleNettyRequest request = new SimpleNettyRequest();
         request.setSyn(this.syn);
         request.setAck(this.ack);
+        request.setRequired(this.required);
         request.setRequestAction(this.requestAction);
         request.setRequestId(this.requestId);
         request.setResponseId(this.responseId);

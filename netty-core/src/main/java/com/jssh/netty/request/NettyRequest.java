@@ -5,9 +5,11 @@ import com.jssh.netty.server.ClientInfo;
 
 public interface NettyRequest {
 
-    Boolean getSyn();
+    boolean getSyn();
 
-    Boolean getAck();
+    boolean getAck();
+
+    boolean getRequired();
 
     String getRequestId();
 
@@ -25,9 +27,11 @@ public interface NettyRequest {
 
     void setResponseId(String responseId);
 
-    void setSyn(Boolean syn);
+    void setSyn(boolean syn);
 
-    void setAck(Boolean ack);
+    void setAck(boolean ack);
+
+    void setRequired(boolean required);
 
     void setRequestId(String requestId);
 

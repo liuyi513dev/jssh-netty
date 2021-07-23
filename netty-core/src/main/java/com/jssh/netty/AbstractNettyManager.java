@@ -210,9 +210,8 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         }
 
         String requestId = request.getRequestId();
-        Boolean ack = request.getAck();
-        if (requestId != null && ack != null && ack) {
-            NettyRequest ackRequest = RequestBuilder.builder().setResponseId(requestId).setSyn(false).setAck(false)
+        if (requestId != null && request.getAck()) {
+            NettyRequest ackRequest = RequestBuilder.builder().setResponseId(requestId)
                     .setRequestAction(ACK_REQUEST).build();
             ackRequest.setClientInfo(request.getClientInfo());
             sendMessage(ctx.channel(), ackRequest, null);
@@ -283,18 +282,17 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             }
 
             logger.error(e.getMessage(), e);
-            response = RequestBuilder.builder().setResponseId(request.getRequestId()).setSyn(false).setAck(false)
+            response = RequestBuilder.builder().setResponseId(request.getRequestId())
                     .setRequestAction(ERROR_REQUEST).setBody(new ErrorObject(e)).build();
         }
 
         if (responseValue != null && responseValue.isReturn()) {
-            response = RequestBuilder.builder().setResponseId(request.getRequestId()).setSyn(false).setAck(false)
+            response = RequestBuilder.builder().setResponseId(request.getRequestId())
                     .setRequestAction(RESPONSE_REQUEST).setBody(responseValue.getReturnValue()).build();
         }
 
-        Boolean requireResponse = (Boolean) request.getHeader("requireResponse");
-        if (response == null && requireResponse != null && requireResponse) {
-            response = RequestBuilder.builder().setResponseId(request.getRequestId()).setSyn(false).setAck(false)
+        if (response == null && request.getRequired()) {
+            response = RequestBuilder.builder().setResponseId(request.getRequestId())
                     .setRequestAction(RESPONSE_REQUEST).setBody(null).build();
         }
 
@@ -323,7 +321,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             case WRITER_IDLE:
                 logger.info("---> PING");
                 ctx.channel().writeAndFlush(
-                        RequestBuilder.builder().setSyn(false).setAck(false).setRequestAction(PING_REQUEST).build());
+                        RequestBuilder.builder().setRequestAction(PING_REQUEST).build());
                 break;
             case READER_IDLE:
             case ALL_IDLE:
@@ -366,14 +364,6 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
         if (request.getRequestId() == null) {
             request.setRequestId(requestId.nextId());
-        }
-
-        if (request.getSyn() == null) {
-            request.setSyn(false);
-        }
-
-        if (request.getAck() == null) {
-            request.setAck(false);
         }
 
         if (request.getSyn()) {
@@ -455,23 +445,17 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             logger.info("---> send message [{}] {}", request.getClientInfo(), request);
         }
 
-        Boolean syn = request.getSyn();
-        Boolean ack = request.getAck();
+        boolean syn = request.getSyn();
+        boolean ack = request.getAck();
+        boolean required = listenerExe.hasResponseListener();
 
-        boolean requireResponse = listenerExe.hasResponseListener();
+        request.setRequired(required);
 
-        if (requireResponse) {
-            Object r = request.getHeader("requireResponse");
-            if (r == null) {
-                request.putHeader("requireResponse", true);
-            }
-        }
-
-        if ((ack || requireResponse) && requestId == null) {
+        if ((ack || required) && requestId == null) {
             throw new BizException("requestId can't be null");
         }
 
-        final NettyResponse response = (ack || requireResponse) ? new NettyResponse(requestId, ack, requireResponse, channel.id().asLongText())
+        final NettyResponse response = (ack || required) ? new NettyResponse(requestId, ack, required, channel.id().asLongText())
                 : null;
 
         if (response != null) {
@@ -532,7 +516,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 listenerExe.fireAck();
             }
 
-            if (requireResponse) {
+            if (required) {
                 Object _response = null;
                 try {
                     _response = response.waitForResponse(responseTimeout, TimeUnit.MILLISECONDS);
@@ -569,7 +553,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                             listenerExe.fireAck();
                         }
 
-                        if (requireResponse) {
+                        if (required) {
                             Object _response = null;
                             try {
                                 _response = response.waitForResponse(responseTimeout, TimeUnit.MILLISECONDS);
