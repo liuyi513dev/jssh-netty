@@ -8,12 +8,13 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class DefaultSerial extends ChunkFileMessageSerial implements MessageSerial {
 
     public static final String $_CLASS_NAME_$ = "$className$";
-    private Charset charset = Charset.forName("UTF-8");
+    private final Charset charset = StandardCharsets.UTF_8;
 
     public static final byte TYPE_NULL = 0;
     public static final byte TYPE_BYTE = 1;
@@ -225,9 +226,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
                 return setValue;
             case TYPE_BYTE_ARRAY:
                 int len = in.readInt();
-                if (len < 0) {
-                    System.out.println(len);
-                }
                 byte[] byteArray = new byte[len];
                 in.readBytes(byteArray);
                 return byteArray;

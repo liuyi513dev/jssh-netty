@@ -129,18 +129,20 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         if (getConfiguration().isLogging()) {
             pipeline.addLast(new LoggingHandler(LogLevel.INFO));
         }
+        //TLS
         SSLEngine sslEngine = createSSLEngine();
         if (sslEngine != null) {
             pipeline.addLast("ssl", new SslHandler(sslEngine));
         }
-
         // 处理心跳
         pipeline.addLast(
                 new IdleStateHandler(getConfiguration().getReaderIdleTime(), getConfiguration().getWriterIdleTime(), getConfiguration().getAllIdleTime(), TimeUnit.SECONDS));
-
+        //处理粘包
         pipeline.addLast(new LengthFieldPrepender(4, false));
-        pipeline.addLast(new LengthFieldBasedFrameDecoder(2048 * 1024, 0, 4, 0, 4));
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(getConfiguration().getMaxFrameLength(), 0, 4, 0, 4));
+        //处理文件传输
         pipeline.addLast("streamer", new ChunkedWriteHandler());
+        //解码器编码器
         pipeline.addLast("decoder", new NettyMessageDecoder(messageSerial));
         pipeline.addLast("encoder", new NettyMessageEncoder(messageSerial));
         pipeline.addLast("writeTO", new WriteTimeoutHandler(getConfiguration().getWriteTimeout()));

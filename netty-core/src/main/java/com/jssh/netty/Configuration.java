@@ -21,6 +21,8 @@ public class Configuration {
     private boolean keepAlive = true;
     private int connectTimeoutMillis = 10000;
 
+    private int maxFrameLength = 2048 * 1024;
+
     private boolean printMessage = true;
     private boolean logging = false;
 
@@ -160,6 +162,14 @@ public class Configuration {
 
     public void setLogging(boolean logging) {
         this.logging = logging;
+    }
+
+    public int getMaxFrameLength() {
+        return maxFrameLength;
+    }
+
+    public void setMaxFrameLength(int maxFrameLength) {
+        this.maxFrameLength = maxFrameLength;
     }
 
     public SSL getSsl() {

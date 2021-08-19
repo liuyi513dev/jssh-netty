@@ -8,9 +8,9 @@ import java.util.Map;
 
 public class ActionScanner implements BeanPostProcessor {
 
-    private ActionScannerProcessor processor = new ActionScannerProcessor();
+    private final ActionScannerProcessor processor = new ActionScannerProcessor();
 
-    private AbstractNettyManager nettyManager;
+    private final AbstractNettyManager nettyManager;
 
     public ActionScanner(AbstractNettyManager nettyManager) {
         this.nettyManager = nettyManager;

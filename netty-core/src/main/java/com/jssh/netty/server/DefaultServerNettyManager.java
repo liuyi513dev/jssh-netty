@@ -48,9 +48,9 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
 
         });
 
-        b.option(ChannelOption.SO_BACKLOG, getConfiguration().getBacklog()); // 设置TCP缓冲区
-        b.option(ChannelOption.SO_SNDBUF, getConfiguration().getSndbuf()); // 设置发送数据缓冲大小
-        b.option(ChannelOption.SO_RCVBUF, getConfiguration().getRcvbuf()); // 设置接受数据缓冲大小
+        b.option(ChannelOption.SO_BACKLOG, getConfiguration().getBacklog());
+        b.option(ChannelOption.SO_SNDBUF, getConfiguration().getSndbuf());
+        b.option(ChannelOption.SO_RCVBUF, getConfiguration().getRcvbuf());
         b.option(ChannelOption.SO_KEEPALIVE, getConfiguration().isKeepAlive());
         b.childOption(ChannelOption.SO_KEEPALIVE, getConfiguration().isKeepAlive());
 

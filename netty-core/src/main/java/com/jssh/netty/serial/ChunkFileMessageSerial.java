@@ -12,8 +12,8 @@ import io.netty.handler.stream.ChunkedFile;
 
 public abstract class ChunkFileMessageSerial implements MessageSerial {
 
-	private List<ChunkFile> serChunkFiles = new ArrayList<>();
-	private List<ChunkFile> deSerchunkFiles = new ArrayList<>();
+	private final List<ChunkFile> serChunkFiles = new ArrayList<>();
+	private final List<ChunkFile> deSerChunkFiles = new ArrayList<>();
 
 	protected void addSerChunkFile(ChunkFile chunkedFile) {
 		serChunkFiles.add(chunkedFile);
@@ -29,16 +29,16 @@ public abstract class ChunkFileMessageSerial implements MessageSerial {
 	}
 
 	protected void addDeSerChunkFile(ChunkFile chunkedFile) {
-		deSerchunkFiles.add(chunkedFile);
+		deSerChunkFiles.add(chunkedFile);
 	}
 
 	@Override
 	public List<ChunkFile> getDeSerChunkFiles() {
-		return deSerchunkFiles;
+		return deSerChunkFiles;
 	}
 
 	protected void clearDeSerChunkFiles() {
-		deSerchunkFiles.clear();
+		deSerChunkFiles.clear();
 	}
 
 	@Override
@@ -91,5 +91,4 @@ public abstract class ChunkFileMessageSerial implements MessageSerial {
 	protected File creatTempFile(long length) throws IOException {
 		return File.createTempFile(UUID.randomUUID().toString(), ".file-cache");
 	}
-
 }

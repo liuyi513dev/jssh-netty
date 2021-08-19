@@ -16,26 +16,6 @@ import java.util.List;
 
 public class NettyMessageDecoder extends ByteToMessageDecoder {
 
-    public static final byte TYPE_NULL = 0;
-    public static final byte TYPE_BYTE = 1;
-    public static final byte TYPE_INTEGER = 2;
-    public static final byte TYPE_BOOLEAN = 3;
-    public static final byte TYPE_LONG = 4;
-    public static final byte TYPE_DOUBLE = 5;
-    public static final byte TYPE_STRING = 6;
-    public static final byte TYPE_DATE = 7;
-    public static final byte TYPE_MAP = 8;
-    public static final byte TYPE_LIST = 9;
-    public static final byte TYPE_BYTE_ARRAY = 10;
-    public static final byte TYPE_CUSTOM = 11;
-    public static final byte TYPE_OBJECT_ARRAY = 12;
-    public static final byte TYPE_CHUNKEDFILE = 13;
-    public static final byte TYPE_SET = 14;
-    public static final byte TYPE_FLOAT = 15;
-    public static final byte TYPE_COLLECTION = 16;
-
-    public static final byte TYPE_CUSTOM_SERIAL = 20;
-
     private final MessageSerial serial;
     private final MessageSerial bodySerial;
     private final boolean isBodyBuf;

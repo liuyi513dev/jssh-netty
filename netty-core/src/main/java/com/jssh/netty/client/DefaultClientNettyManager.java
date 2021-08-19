@@ -31,13 +31,12 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
     private volatile boolean valid;
     private volatile CountDownLatch validLatch;
 
-    private List<ClientNettyListener> listener = new CopyOnWriteArrayList<>();
+    private final List<ClientNettyListener> listener = new CopyOnWriteArrayList<>();
 
     private ClientInfoProvider clientInfoProvider;
 
     @Override
     public void initBootstrap() {
-
         Bootstrap b = new Bootstrap();
         b.group(new NioEventLoopGroup(getConfiguration().getWorkerCount())).channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
@@ -48,9 +47,9 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
                     }
                 });
 
-        // b.option(ChannelOption.SO_BACKLOG, backlog); // 设置TCP缓冲区
-        b.option(ChannelOption.SO_SNDBUF, getConfiguration().getSndbuf()); // 设置发送数据缓冲大小
-        b.option(ChannelOption.SO_RCVBUF, getConfiguration().getRcvbuf()); // 设置接受数据缓冲大小
+        // b.option(ChannelOption.SO_BACKLOG, backlog);
+        b.option(ChannelOption.SO_SNDBUF, getConfiguration().getSndbuf());
+        b.option(ChannelOption.SO_RCVBUF, getConfiguration().getRcvbuf());
         b.option(ChannelOption.SO_KEEPALIVE, getConfiguration().isKeepAlive());
         b.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getConfiguration().getConnectTimeoutMillis());
         this.bootstrap = b;
@@ -187,15 +186,6 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
     @Override
     public void removeListener(ClientNettyListener listener) {
         this.listener.remove(listener);
-    }
-
-    @Override
-    public NettyStatus nettyStatus() {
-        Channel ch;
-        if (channelFuture != null && (ch = channelFuture.channel()) != null && ch.isActive()) {
-            return NettyStatus.ACTIVE;
-        }
-        return NettyStatus.DISCONNECTED;
     }
 
     public void setTcpPort(InetSocketAddress tcpPort) {
