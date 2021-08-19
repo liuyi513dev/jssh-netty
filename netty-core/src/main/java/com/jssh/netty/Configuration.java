@@ -174,6 +174,7 @@ public class Configuration {
         private boolean enable;
         private String keyStorePath;
         private String keyStorePassword;
+        private String keyPassword;
         private String trustCertificatePath;
         private String trustCertificateAlias;
         private String protocol;
@@ -242,6 +243,14 @@ public class Configuration {
 
         public void setNeedClientAuth(boolean needClientAuth) {
             this.needClientAuth = needClientAuth;
+        }
+
+        public String getKeyPassword() {
+            return keyPassword;
+        }
+
+        public void setKeyPassword(String keyPassword) {
+            this.keyPassword = keyPassword;
         }
     }
 }

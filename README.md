@@ -143,3 +143,56 @@ public class ClientMessageService {
 }
 ```
 ***当客户端向服务端发送消息时，直接调用NettyEndpointService中的方法即可。***
+
+## 开启TLS
+***默认情况下没有开启TLS，如需开启TLS做如下配置***
+
+### 服务端配置
+```properties
+jssh.netty.server.configuration.ssl.enable=true
+jssh.netty.server.configuration.ssl.keyStorePath=/ssl/serverkey.jks
+jssh.netty.server.configuration.ssl.keyStorePassword=storepass
+jssh.netty.server.configuration.ssl.keyPassword=keypass
+jssh.netty.server.configuration.ssl.protocol=TLSv1.2
+jssh.netty.server.configuration.ssl.clientMode=false
+jssh.netty.server.configuration.ssl.needClientAuth=true
+```
+
+### 客户端配置
+```properties
+jssh.netty.client.configuration.ssl.enable=true
+jssh.netty.client.configuration.ssl.keyStorePath=/ssl/clientkey.jks
+jssh.netty.client.configuration.ssl.keyStorePassword=storepass
+jssh.netty.client.configuration.ssl.keyPassword=keypass
+jssh.netty.client.configuration.ssl.protocol=TLSv1.2
+jssh.netty.client.configuration.ssl.clientMode=true
+jssh.netty.client.configuration.ssl.needClientAuth=true
+```
+
+### 用keytool生成证书
+
+将生成的证书放到resources/ssl/目录下
+
+***单向认证-客户端校验服务端***
+```
+生成服务端证书及证书仓库
+keytool -genkey -alias "serverkey" -keysize 2048 -validity 365 -keyalg RSA -dname "CN=localhost" -keypass "keypass" -storepass "storepass" -keystore "d:\key\serverkey.jks"
+
+导出服务端证书
+keytool -export -alias "serverkey" -keystore "d:\key\serverkey.jks" -storepass "storepass" -file "d:\key\serverkey.cer"
+
+生成客户端证书及证书仓库
+keytool -genkey -alias "clientkey" -keysize 2048 -validity 365 -keyalg RSA -dname "CN=localhost" -keypass "keypass" -storepass "storepass" -keystore "d:\key\clientkey.jks"
+
+将服务端证书导入客户端证书仓库中
+keytool -import -trustcacerts -alias "serverkey" -file "D:\key\serverkey.cer" -storepass "storepass" -keystore "D:\key\clientkey.jks"
+```
+***双向认证***
+```
+导出客户端证书
+keytool -export -alias "clientkey" -keystore "d:\key\clientkey.jks" -storepass "storepass" -file "d:\key\clientkey.cer"
+
+将客户端证书导入服务端证书仓库中
+keytool -import -trustcacerts -alias "clientkey" -file "D:\key\clientkey.cer" -storepass "storepass" -keystore "D:\key\serverkey.jks"
+```
+

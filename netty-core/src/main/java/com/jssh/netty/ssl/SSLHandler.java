@@ -37,7 +37,7 @@ public class SSLHandler {
             keyStore.load(in, ssl.getKeyStorePassword().toCharArray());
         }
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
-        keyManagerFactory.init(keyStore, ssl.getKeyStorePassword().toCharArray());
+        keyManagerFactory.init(keyStore, ssl.getKeyPassword().toCharArray());
 
         KeyStore trustCertificateStore = keyStore;
         if (ssl.getTrustCertificatePath() != null) {
