@@ -1,19 +1,25 @@
 # jssh-netty
 
-服务端：
+## 服务端：
+
+### pom.xml中添加依赖
+
+```xml
+<dependency>
+    <groupId>com.jssh.netty</groupId>
+    <artifactId>netty-starter</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+### 配置Config
 ```java
 @Configuration
-@EnableServerEndpoint(basePackages = "xxx.service")
 public class ServerNettyConfig {
 
-    @Bean(name = "server", destroyMethod = "close")
-    @ConfigurationProperties
-    public DefaultServerNettyManager serverNettyManager() {
-        DefaultServerNettyManager manager = new DefaultServerNettyManager();
-        manager.setClientValidator(clientValidator());
-        manager.setTcpPort(new InetSocketAddress(8001));
-        return manager;
-    }
+    @Resource
+    @Lazy
+    private DefaultServerNettyManager serverNettyManager;
 
     @Bean
     public ClientValidator clientValidator() {
@@ -25,23 +31,33 @@ public class ServerNettyConfig {
         };
     }
 
-    @Bean
-    public ActionScanner actionScanner() {
-        return new ActionScanner(serverNettyManager());
-    }
-
     @EventListener(ApplicationStartedEvent.class)
     public void startNetty() throws Exception {
-        serverNettyManager().start();
+        serverNettyManager.start();
     }
 }
+```
+### 配置application.properties
 
+```properties
+#指定Netty监听端口
+jssh.netty.server.port=8090
+```
+
+### 服务端向客户端发送消息
+```java
+/**
+自动生成代理对象，不需要实现类
+**/
 @ServerEndpoint
 public interface NettyEndpointService {
 
     Object sendMessageToClient(Object clientId, String parameters);
 }
+```
 
+### 服务端接收客户端的消息
+```java
 @Service
 public class ServerMessageService {
 
@@ -52,22 +68,28 @@ public class ServerMessageService {
     }
 }
 ```
-当服务端向客户端发送消息时，直接调用ServerEndpoint中的方法即可，第一个参数固定为客户端标识即clientId，表示向哪个客户端发送消息。
+***当服务端向客户端发送消息时，直接调用NettyEndpointService中的方法即可，第一个参数固定为客户端标识即clientId，表示向哪个客户端发送消息。***
 
-客户端：
+# 客户端：
+
+### pom.xml中添加依赖
+
+```xml
+<dependency>
+    <groupId>com.jssh.netty</groupId>
+    <artifactId>netty-starter</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+### 配置Config
 ```java
 @Configuration
-@EnableClientEndpoint(basePackages = "xxx.service")
 public class ClientNettyConfig {
 
-    @Bean(name = "client", destroyMethod = "close")
-    @ConfigurationProperties
-    public DefaultClientNettyManager clientNettyManager() {
-        DefaultClientNettyManager manager = new DefaultClientNettyManager();
-        manager.setClientInfoProvider(clientInfoProvider());
-        manager.setTcpPort(new InetSocketAddress("serverIp", 8001));
-        return manager;
-    }
+    @Resource
+    @Lazy
+    private DefaultClientNettyManager defaultClientNettyManager;
 
     @Bean
     public ClientInfoProvider clientInfoProvider() {
@@ -80,23 +102,36 @@ public class ClientNettyConfig {
         });
     }
 
-    @Bean
-    public ActionScanner actionScanner() {
-        return new ActionScanner(clientNettyManager());
-    }
-
     @EventListener(ApplicationStartedEvent.class)
     public void startNetty() throws Exception {
-        clientNettyManager().start();
+        defaultClientNettyManager.start();
     }
 }
+```
 
+### 配置application.properties
+
+```properties
+#指定服务端
+jssh.netty.client.host=127.0.0.1
+jssh.netty.client.port=8090
+```
+
+### 客户端向服务端发送消息
+```java
+/**
+自动生成代理对象，不需要实现类
+**/
 @ClientEndpoint
 public interface NettyEndpointService {
 
     Object sendMessageToServer(String parameters);
 }
+```
 
+### 客户端接收服务端的消息
+
+```java
 @Service
 public class ClientMessageService {
 
@@ -106,7 +141,5 @@ public class ClientMessageService {
         return true;
     }
 }
-
-
 ```
-当客户端向服务端发送消息时，直接调用ClientEndpoint中的方法即可。
+***当客户端向服务端发送消息时，直接调用NettyEndpointService中的方法即可。***
