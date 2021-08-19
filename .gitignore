@@ -1,0 +1,4 @@
+/netty-core/target/
+/netty-spring/target/
+/netty-autoconfigure/target/
+/netty-starter/target/

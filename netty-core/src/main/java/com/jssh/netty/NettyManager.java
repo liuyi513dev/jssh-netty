@@ -23,4 +23,6 @@ public interface NettyManager {
 	void inactive(ChannelHandlerContext ctx) throws Exception;
 
 	void idleStateEvent(ChannelHandlerContext ctx, IdleState idleState) throws Exception;
+
+	Configuration getConfiguration();
 }

@@ -1,5 +1,7 @@
 package com.jssh.netty.ssl;
 
+import com.jssh.netty.Configuration;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -11,20 +13,13 @@ import java.security.cert.CertificateFactory;
 
 public class SSLHandler {
 
-    private boolean enable;
-
-    private String keyStorePath;
-    private String keyStorePassword;
-    private String trustCertificatePath;
-    private String trustCertificateAlias;
-    private String protocol;
-    private boolean clientMode;
-    private boolean needClientAuth;
+    private Configuration.SSL ssl;
 
     private SSLContext sslContext;
 
-    public void initSSL() throws Exception {
-        if (enable && sslContext == null) {
+    public void initSSL(Configuration.SSL ssl) throws Exception {
+        this.ssl = ssl;
+        if (ssl.isEnable() && sslContext == null) {
             initSSLContext();
         }
     }
@@ -34,28 +29,28 @@ public class SSLHandler {
             CertificateException, UnrecoverableKeyException, KeyManagementException {
 
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        InputStream keyStoreStream = this.getClass().getResourceAsStream(keyStorePath);
-        if (keyStoreStream == null && new File(keyStorePath).exists()) {
-            keyStoreStream = new FileInputStream(keyStorePath);
+        InputStream keyStoreStream = this.getClass().getResourceAsStream(ssl.getKeyStorePath());
+        if (keyStoreStream == null && new File(ssl.getKeyStorePath()).exists()) {
+            keyStoreStream = new FileInputStream(ssl.getKeyStorePath());
         }
         try (InputStream in = keyStoreStream) {
-            keyStore.load(in, keyStorePassword.toCharArray());
+            keyStore.load(in, ssl.getKeyStorePassword().toCharArray());
         }
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
-        keyManagerFactory.init(keyStore, keyStorePassword.toCharArray());
+        keyManagerFactory.init(keyStore, ssl.getKeyStorePassword().toCharArray());
 
         KeyStore trustCertificateStore = keyStore;
-        if (trustCertificatePath != null) {
+        if (ssl.getTrustCertificatePath() != null) {
 
             trustCertificateStore = KeyStore.getInstance(KeyStore.getDefaultType());
             trustCertificateStore.load(null, null);
 
-            InputStream trustCertificateStream = this.getClass().getResourceAsStream(trustCertificatePath);
-            if (trustCertificateStream == null && new File(trustCertificatePath).exists()) {
-                trustCertificateStream = new FileInputStream(trustCertificatePath);
+            InputStream trustCertificateStream = this.getClass().getResourceAsStream(ssl.getTrustCertificatePath());
+            if (trustCertificateStream == null && new File(ssl.getTrustCertificatePath()).exists()) {
+                trustCertificateStream = new FileInputStream(ssl.getTrustCertificatePath());
             }
             try (InputStream in = trustCertificateStream) {
-                trustCertificateStore.setCertificateEntry(trustCertificateAlias,
+                trustCertificateStore.setCertificateEntry(ssl.getTrustCertificateAlias(),
                         CertificateFactory.getInstance("X.509").generateCertificate(in));
             }
         }
@@ -63,66 +58,26 @@ public class SSLHandler {
         TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("SunX509");
         trustManagerFactory.init(trustCertificateStore);
 
-        this.sslContext = SSLContext.getInstance(protocol);
+        this.sslContext = SSLContext.getInstance(ssl.getProtocol());
         this.sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
     }
 
     public SSLEngine createSSLEngine() {
-        if (!enable || sslContext == null) {
+        if (sslContext == null) {
             return null;
         }
         SSLEngine sslEngine = sslContext.createSSLEngine();
-        sslEngine.setUseClientMode(clientMode);
-        sslEngine.setNeedClientAuth(needClientAuth);
+        sslEngine.setUseClientMode(ssl.isClientMode());
+        sslEngine.setNeedClientAuth(ssl.isNeedClientAuth());
         return sslEngine;
     }
 
-    public boolean isEnable() {
-        return enable;
+    public Configuration.SSL getSsl() {
+        return ssl;
     }
 
-    public void setEnable(boolean enable) {
-        this.enable = enable;
-    }
-
-    public String getKeyStorePath() {
-        return keyStorePath;
-    }
-
-    public void setKeyStorePath(String keyStorePath) {
-        this.keyStorePath = keyStorePath;
-    }
-
-    public String getKeyStorePassword() {
-        return keyStorePassword;
-    }
-
-    public void setKeyStorePassword(String keyStorePassword) {
-        this.keyStorePassword = keyStorePassword;
-    }
-
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public void setProtocol(String protocol) {
-        this.protocol = protocol;
-    }
-
-    public boolean isClientMode() {
-        return clientMode;
-    }
-
-    public void setClientMode(boolean clientMode) {
-        this.clientMode = clientMode;
-    }
-
-    public boolean isNeedClientAuth() {
-        return needClientAuth;
-    }
-
-    public void setNeedClientAuth(boolean needClientAuth) {
-        this.needClientAuth = needClientAuth;
+    public void setSsl(Configuration.SSL ssl) {
+        this.ssl = ssl;
     }
 
     public SSLContext getSslContext() {
@@ -131,21 +86,5 @@ public class SSLHandler {
 
     public void setSslContext(SSLContext sslContext) {
         this.sslContext = sslContext;
-    }
-
-    public String getTrustCertificatePath() {
-        return trustCertificatePath;
-    }
-
-    public void setTrustCertificatePath(String trustCertificatePath) {
-        this.trustCertificatePath = trustCertificatePath;
-    }
-
-    public String getTrustCertificateAlias() {
-        return trustCertificateAlias;
-    }
-
-    public void setTrustCertificateAlias(String trustCertificateAlias) {
-        this.trustCertificateAlias = trustCertificateAlias;
     }
 }

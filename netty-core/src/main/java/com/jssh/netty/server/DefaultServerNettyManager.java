@@ -38,7 +38,7 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
     @Override
     public void initBootstrap() {
         ServerBootstrap b = new ServerBootstrap();
-        b.group(new NioEventLoopGroup(getBossCount()), new NioEventLoopGroup(getWorkerCount()))
+        b.group(new NioEventLoopGroup(getConfiguration().getBossCount()), new NioEventLoopGroup(getConfiguration().getWorkerCount()))
                 .channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
 
             @Override
@@ -48,11 +48,11 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
 
         });
 
-        b.option(ChannelOption.SO_BACKLOG, getBacklog()); // 设置TCP缓冲区
-        b.option(ChannelOption.SO_SNDBUF, getSndbuf()); // 设置发送数据缓冲大小
-        b.option(ChannelOption.SO_RCVBUF, getRcvbuf()); // 设置接受数据缓冲大小
-        b.option(ChannelOption.SO_KEEPALIVE, isKeepAlive());
-        b.childOption(ChannelOption.SO_KEEPALIVE, isKeepAlive());
+        b.option(ChannelOption.SO_BACKLOG, getConfiguration().getBacklog()); // 设置TCP缓冲区
+        b.option(ChannelOption.SO_SNDBUF, getConfiguration().getSndbuf()); // 设置发送数据缓冲大小
+        b.option(ChannelOption.SO_RCVBUF, getConfiguration().getRcvbuf()); // 设置接受数据缓冲大小
+        b.option(ChannelOption.SO_KEEPALIVE, getConfiguration().isKeepAlive());
+        b.childOption(ChannelOption.SO_KEEPALIVE, getConfiguration().isKeepAlive());
 
         this.serverBootstrap = b;
     }

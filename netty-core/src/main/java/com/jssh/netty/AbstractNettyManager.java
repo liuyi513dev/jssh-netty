@@ -59,27 +59,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
     }
 
-    private int executorSize = 10;
-    private int responseTimeout = 600000;
-    private int validTime = 600000;
-    private int responseCleanRate = 7200000;
-
-    private int bossCount = 5;
-    private int workerCount = 10;
-
-    private long readerIdleTime = 180;
-    private long writerIdleTime = 120;
-    private long allIdleTime = 240;
-    private int writeTimeout = 600;
-
-    private int backlog = 128;
-    private int sndbuf = 32768;
-    private int rcvbuf = 32768;
-    private boolean keepAlive = true;
-    private int connectTimeoutMillis = 10000;
-
-    private boolean printMessage = true;
-    private boolean logging = false;
+    private Configuration configuration;
 
     private final ConcurrentMap<String, NettyResponse> responseMap = new ConcurrentHashMap<>();
 
@@ -103,8 +83,9 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
     private MessageSerial messageSerial;
 
     public void initExecutors() throws Exception {
-        this.executor = Executors.newScheduledThreadPool(executorSize);
-        this.executor.scheduleWithFixedDelay(new NettyResultClean(validTime), responseCleanRate, responseCleanRate,
+        this.executor = Executors.newScheduledThreadPool(getConfiguration().getExecutorSize());
+        this.executor.scheduleWithFixedDelay(new NettyResultClean(getConfiguration().getValidTime()),
+                getConfiguration().getResponseCleanRate(), getConfiguration().getResponseCleanRate(),
                 TimeUnit.MILLISECONDS);
         this.executor.scheduleWithFixedDelay(new SendListOnConnectedTask(), 30, 30, TimeUnit.SECONDS);
         this.receiveWorker = Executors.newCachedThreadPool();
@@ -135,7 +116,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
     }
 
     protected void initSSL() throws Exception {
-        ssl.initSSL();
+        ssl.initSSL(getConfiguration().getSsl());
     }
 
     protected void initBootstrap() {
@@ -145,7 +126,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
     protected void initSocketChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
         // 处理日志
-        if (logging) {
+        if (getConfiguration().isLogging()) {
             pipeline.addLast(new LoggingHandler(LogLevel.INFO));
         }
         SSLEngine sslEngine = createSSLEngine();
@@ -155,14 +136,14 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
         // 处理心跳
         pipeline.addLast(
-                new IdleStateHandler(getReaderIdleTime(), getWriterIdleTime(), getAllIdleTime(), TimeUnit.SECONDS));
+                new IdleStateHandler(getConfiguration().getReaderIdleTime(), getConfiguration().getWriterIdleTime(), getConfiguration().getAllIdleTime(), TimeUnit.SECONDS));
 
         pipeline.addLast(new LengthFieldPrepender(4, false));
         pipeline.addLast(new LengthFieldBasedFrameDecoder(2048 * 1024, 0, 4, 0, 4));
         pipeline.addLast("streamer", new ChunkedWriteHandler());
         pipeline.addLast("decoder", new NettyMessageDecoder(messageSerial));
         pipeline.addLast("encoder", new NettyMessageEncoder(messageSerial));
-        pipeline.addLast("writeTO", new WriteTimeoutHandler(getWriteTimeout()));
+        pipeline.addLast("writeTO", new WriteTimeoutHandler(getConfiguration().getWriteTimeout()));
         pipeline.addLast("handler", handler);
     }
 
@@ -199,7 +180,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             chain.doFilter(ctx, request);
         }
 
-        if (printMessage) {
+        if (getConfiguration().isPrintMessage()) {
             logger.info("<<--- receiving message [{}] {}", request.getClientInfo(), request);
         }
 
@@ -441,7 +422,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
         String requestId = request.getRequestId();
 
-        if (printMessage) {
+        if (getConfiguration().isPrintMessage()) {
             logger.info("---> send message [{}] {}", request.getClientInfo(), request);
         }
 
@@ -495,7 +476,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 return;
             }
             boolean success = channelFuture.isSuccess();
-            if (printMessage && requestId != null) {
+            if (getConfiguration().isPrintMessage() && requestId != null) {
                 logger.info("request {} {} ", requestId, success);
             }
             if (!success) {
@@ -519,7 +500,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
             if (required) {
                 Object _response = null;
                 try {
-                    _response = response.waitForResponse(responseTimeout, TimeUnit.MILLISECONDS);
+                    _response = response.waitForResponse(getConfiguration().getResponseTimeout(), TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
                     clearResultMap(requestId, response);
                     listenerExe.fireException(e);
@@ -531,7 +512,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         } else {
             channelFuture.addListener(future -> {
                 boolean success = future.isSuccess();
-                if (printMessage && requestId != null) {
+                if (getConfiguration().isPrintMessage() && requestId != null) {
                     logger.info("request {} {} ", requestId, success);
                 }
                 if (!success) {
@@ -556,7 +537,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                         if (required) {
                             Object _response = null;
                             try {
-                                _response = response.waitForResponse(responseTimeout, TimeUnit.MILLISECONDS);
+                                _response = response.waitForResponse(getConfiguration().getResponseTimeout(), TimeUnit.MILLISECONDS);
                             } catch (Exception e) {
                                 clearResultMap(requestId, response);
                                 listenerExe.fireException(e);
@@ -733,142 +714,6 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         return requestHandler;
     }
 
-    public int getExecutorSize() {
-        return executorSize;
-    }
-
-    public void setExecutorSize(int executorSize) {
-        this.executorSize = executorSize;
-    }
-
-    public int getResponseTimeout() {
-        return responseTimeout;
-    }
-
-    public void setResponseTimeout(int responseTimeout) {
-        this.responseTimeout = responseTimeout;
-    }
-
-    public int getValidTime() {
-        return validTime;
-    }
-
-    public void setValidTime(int validTime) {
-        this.validTime = validTime;
-    }
-
-    public int getResponseCleanRate() {
-        return responseCleanRate;
-    }
-
-    public void setResponseCleanRate(int responseCleanRate) {
-        this.responseCleanRate = responseCleanRate;
-    }
-
-    public int getBossCount() {
-        return bossCount;
-    }
-
-    public void setBossCount(int bossCount) {
-        this.bossCount = bossCount;
-    }
-
-    public int getWorkerCount() {
-        return workerCount;
-    }
-
-    public void setWorkerCount(int workerCount) {
-        this.workerCount = workerCount;
-    }
-
-    public long getReaderIdleTime() {
-        return readerIdleTime;
-    }
-
-    public void setReaderIdleTime(long readerIdleTime) {
-        this.readerIdleTime = readerIdleTime;
-    }
-
-    public long getWriterIdleTime() {
-        return writerIdleTime;
-    }
-
-    public void setWriterIdleTime(long writerIdleTime) {
-        this.writerIdleTime = writerIdleTime;
-    }
-
-    public long getAllIdleTime() {
-        return allIdleTime;
-    }
-
-    public void setAllIdleTime(long allIdleTime) {
-        this.allIdleTime = allIdleTime;
-    }
-
-    public int getBacklog() {
-        return backlog;
-    }
-
-    public void setBacklog(int backlog) {
-        this.backlog = backlog;
-    }
-
-    public int getSndbuf() {
-        return sndbuf;
-    }
-
-    public void setSndbuf(int sndbuf) {
-        this.sndbuf = sndbuf;
-    }
-
-    public int getRcvbuf() {
-        return rcvbuf;
-    }
-
-    public void setRcvbuf(int rcvbuf) {
-        this.rcvbuf = rcvbuf;
-    }
-
-    public boolean isKeepAlive() {
-        return keepAlive;
-    }
-
-    public void setKeepAlive(boolean keepAlive) {
-        this.keepAlive = keepAlive;
-    }
-
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
-    }
-
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        this.connectTimeoutMillis = connectTimeoutMillis;
-    }
-
-    public boolean isPrintMessage() {
-        return printMessage;
-    }
-
-    public void setPrintMessage(boolean printMessage) {
-        this.printMessage = printMessage;
-    }
-
-    public int getWriteTimeout() {
-        return writeTimeout;
-    }
-
-    public void setWriteTimeout(int writeTimeout) {
-        this.writeTimeout = writeTimeout;
-    }
-
-    public boolean isLogging() {
-        return logging;
-    }
-
-    public void setLogging(boolean logging) {
-        this.logging = logging;
-    }
-
     public SSLHandler getSsl() {
         return ssl;
     }
@@ -891,5 +736,14 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     public void setRequestId(RequestId requestId) {
         this.requestId = requestId;
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+        return configuration;
+    }
+
+    public void setConfiguration(Configuration configuration) {
+        this.configuration = configuration;
     }
 }

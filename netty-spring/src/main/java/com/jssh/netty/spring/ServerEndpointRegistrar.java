@@ -1,45 +1,46 @@
 package com.jssh.netty.spring;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerEndpointRegistrar implements ImportBeanDefinitionRegistrar, ResourceLoaderAware {
 
-	@Override
-	public void setResourceLoader(ResourceLoader resourceLoader) {
+    @Override
+    public void setResourceLoader(ResourceLoader resourceLoader) {
 
-	}
+    }
 
-	@Override
-	public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-		AnnotationAttributes annoAttrs = AnnotationAttributes
-				.fromMap(importingClassMetadata.getAnnotationAttributes(EnableServerEndpoint.class.getName()));
-		ClassPathEndpointScanner scanner = new ClassPathEndpointScanner(registry);
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(ServerEndpointConfigurer.class);
 
-		List<String> basePackages = new ArrayList<String>();
-		for (String pkg : annoAttrs.getStringArray("value")) {
-			if (StringUtils.hasText(pkg)) {
-				basePackages.add(pkg);
-			}
-		}
-		for (String pkg : annoAttrs.getStringArray("basePackages")) {
-			if (StringUtils.hasText(pkg)) {
-				basePackages.add(pkg);
-			}
-		}
-		scanner.setBeanClass(ServerEndpointFactoryBean.class);
-		scanner.addProperty("server", new RuntimeBeanReference(annoAttrs.getString("serverBeanName")));
-		scanner.addIncludeFilter(new AnnotationTypeFilter(ServerEndpoint.class));
-		scanner.scan(StringUtils.toStringArray(basePackages));
-	}
+        AnnotationAttributes attributes = AnnotationAttributes
+                .fromMap(importingClassMetadata.getAnnotationAttributes(EnableServerEndpoint.class.getName()));
+
+        List<String> basePackages = new ArrayList<String>();
+        for (String pkg : attributes.getStringArray("value")) {
+            if (StringUtils.hasText(pkg)) {
+                basePackages.add(pkg);
+            }
+        }
+        for (String pkg : attributes.getStringArray("basePackages")) {
+            if (StringUtils.hasText(pkg)) {
+                basePackages.add(pkg);
+            }
+        }
+
+        String beanName = attributes.getString("serverBeanName");
+        builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(basePackages));
+        builder.addPropertyValue("baseBeanName", beanName);
+        registry.registerBeanDefinition(ServerEndpointConfigurer.class.getName(), builder.getBeanDefinition());
+    }
 }

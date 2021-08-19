@@ -7,7 +7,7 @@
     <groupId>com.jssh.netty</groupId>
     <artifactId>netty-root</artifactId>
     <name>netty root</name>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -17,7 +17,42 @@
         <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
         <maven-compiler-plugin.version>3.7.0</maven-compiler-plugin.version>
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+        <netty.version>4.1.44.Final</netty.version>
+        <slf4j.version>1.7.25</slf4j.version>
+        <spring-boot.version>2.5.0</spring-boot.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.jssh.netty</groupId>
+                <artifactId>netty-spring</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jssh.netty</groupId>
+                <artifactId>netty-core</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jssh.netty</groupId>
+                <artifactId>netty-autoconfigure</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jssh.netty</groupId>
+                <artifactId>netty-starter</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
@@ -81,16 +116,18 @@
     <distributionManagement>
         <snapshotRepository>
             <id>nexus-snapshots</id>
-            <url>http://172.30.100.81:8081/repository/maven-snapshots/</url>
+            <url>http://172.30.30.214:8081/repository/maven-snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>nexus-releases</id>
-            <url>http://172.30.100.81:8081/repository/maven-releases/</url>
+            <url>http://172.30.30.214:8081/repository/maven-releases/</url>
         </repository>
     </distributionManagement>
 
     <modules>
         <module>netty-core</module>
         <module>netty-spring</module>
+        <module>netty-autoconfigure</module>
+        <module>netty-starter</module>
     </modules>
 </project>

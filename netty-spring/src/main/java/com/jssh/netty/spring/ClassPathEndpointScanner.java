@@ -16,7 +16,7 @@ public class ClassPathEndpointScanner extends ClassPathBeanDefinitionScanner {
 
 	private Map<String, Object> properties = new HashMap<>();
 	
-	private Class<?> beanClass;
+	private Class<?> factoryBean;
 
 	public ClassPathEndpointScanner(BeanDefinitionRegistry registry) {
 		super(registry, false);
@@ -39,7 +39,7 @@ public class ClassPathEndpointScanner extends ClassPathBeanDefinitionScanner {
 			definition = (GenericBeanDefinition) holder.getBeanDefinition();
 
 			definition.getConstructorArgumentValues().addGenericArgumentValue(definition.getBeanClassName());
-			definition.setBeanClass(this.beanClass);
+			definition.setBeanClass(this.factoryBean);
 
 			for (Entry<String, Object> entry : properties.entrySet()) {
 				definition.getPropertyValues().add(entry.getKey(), entry.getValue());
@@ -52,13 +52,13 @@ public class ClassPathEndpointScanner extends ClassPathBeanDefinitionScanner {
 	public void addProperty(String key, Object value) {
 		properties.put(key, value);
 	}
-	
-	public Class<?> getBeanClass() {
-		return beanClass;
+
+	public Class<?> getFactoryBean() {
+		return factoryBean;
 	}
 
-	public void setBeanClass(Class<?> beanClass) {
-		this.beanClass = beanClass;
+	public void setFactoryBean(Class<?> factoryBean) {
+		this.factoryBean = factoryBean;
 	}
 
 	@Override
