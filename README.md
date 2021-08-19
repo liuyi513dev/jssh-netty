@@ -70,7 +70,7 @@ public class ServerMessageService {
 ```
 ***当服务端向客户端发送消息时，直接调用NettyEndpointService中的方法即可，第一个参数固定为客户端标识即clientId，表示向哪个客户端发送消息。***
 
-# 客户端：
+## 客户端：
 
 ### pom.xml中添加依赖
 
