@@ -67,16 +67,13 @@ public abstract class ChunkFileMessageSerial implements MessageSerial {
 			return false;
 		}
 
-		if (chunkFiles != null && chunkFiles.size() > 0) {
-
-			for (Iterator<ChunkFile> it = chunkFiles.iterator(); it.hasNext();) {
-				ChunkFile file = it.next();
-				if (file.writeFrom(in)) {
-					return false;
-				}
-				file.close();
-				it.remove();
+		for (Iterator<ChunkFile> it = chunkFiles.iterator(); it.hasNext();) {
+			ChunkFile file = it.next();
+			if (file.writeFrom(in)) {
+				return false;
 			}
+			file.close();
+			it.remove();
 		}
 
 		clearDeSerChunkFiles();
