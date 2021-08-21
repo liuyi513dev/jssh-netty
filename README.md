@@ -196,3 +196,39 @@ keytool -export -alias "clientkey" -keystore "d:\key\clientkey.jks" -storepass "
 keytool -import -trustcacerts -alias "clientkey" -file "D:\key\clientkey.cer" -storepass "storepass" -keystore "D:\key\serverkey.jks"
 ```
 
+## 自定义序列化
+***如有需要可自定义序列化方法，***
+***比如用json替换系统内置的序列化方式***
+
+```java
+@Bean
+public FileMessageSerialFactory fileMessageSerialFactory() {
+    return JsonSerial::new;
+}
+
+static class JsonSerial extends DefaultSerial {
+
+    static {
+        ParserConfig.getGlobalInstance().setAutoTypeSupport(true);
+    }
+
+    @Override
+    protected boolean writeByCustomSerial(ByteBuf buf, Object obj) {
+
+        String json = JSONObject.toJSONString(obj, SerializerFeature.WriteClassName);
+        byte[] bytes = json.getBytes(DefaultSerial.default_charset);
+        buf.writeInt(bytes.length);
+        buf.writeBytes(bytes);
+        return true;
+    }
+
+    @Override
+    protected Object readByCustomSerial(ByteBuf buf) {
+        int len = buf.readInt();
+        byte[] bytes = new byte[len];
+        buf.readBytes(bytes);
+        String json = new String(bytes, DefaultSerial.default_charset);
+        return JSONObject.parse(json);
+    }
+}
+```
