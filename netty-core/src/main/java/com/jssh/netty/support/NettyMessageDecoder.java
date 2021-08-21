@@ -5,7 +5,7 @@ import com.jssh.netty.request.HeaderList;
 import com.jssh.netty.serial.BodyBuf;
 import com.jssh.netty.serial.ChunkFile;
 import com.jssh.netty.serial.DefaultSerial;
-import com.jssh.netty.serial.MessageSerial;
+import com.jssh.netty.serial.FileMessageSerial;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -16,28 +16,23 @@ import java.util.List;
 
 public class NettyMessageDecoder extends ByteToMessageDecoder {
 
-    private final MessageSerial serial;
-    private final MessageSerial bodySerial;
     private final boolean isBodyBuf;
+
+    private final FileMessageSerial serial;
 
     private MessageDecoderHolder messageHolder;
 
     public NettyMessageDecoder() {
-        this(true, null);
+        this(new DefaultSerial());
     }
 
-    public NettyMessageDecoder(boolean isBodyBuf) {
-        this(isBodyBuf, null);
+    public NettyMessageDecoder(FileMessageSerial serial) {
+        this(true, serial);
     }
 
-    public NettyMessageDecoder(MessageSerial messageSerial) {
-        this(true, messageSerial);
-    }
-
-    public NettyMessageDecoder(boolean isBodyBuf, MessageSerial bodySerial) {
-        this.serial = new DefaultSerial();
+    public NettyMessageDecoder(boolean isBodyBuf, FileMessageSerial serial) {
+        this.serial = serial;
         this.isBodyBuf = isBodyBuf;
-        this.bodySerial = bodySerial;
     }
 
     @Override
@@ -62,18 +57,13 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
         builder.setHeaders((HeaderList) serial.deSerialize(in));
 
         int start = in.readerIndex();
-
-        boolean isDefaultSerial = in.readBoolean();
-        MessageSerial ser = isDefaultSerial ? serial : bodySerial;
-        Object body = ser.deSerialize(in);
-
+        Object body = serial.deSerialize(in);
         builder.setBody(body);
-
         int end = in.readerIndex();
 
         if (isBodyBuf && body != null && end > start) {
             // message.setBodyBuf(in.copy(start, end - start));
-            List<ChunkFile> chunkFiles = ser.getDeSerChunkFiles();
+            List<ChunkFile> chunkFiles = serial.getDeSerChunkFiles();
             List<ChunkFile> bodyBufFiles = null;
             if (chunkFiles != null && chunkFiles.size() > 0) {
                 bodyBufFiles = new ArrayList<>(chunkFiles);
@@ -82,27 +72,25 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
             builder.setBodyBuf(bodyBuf);
         }
 
-        if (ser.deSerializeComplete(builder, in)) {
+        if (serial.deSerializeComplete(builder, in)) {
             out.add(builder.build());
             return;
         }
 
-        messageHolder = new MessageDecoderHolder(ser, builder);
+        messageHolder = new MessageDecoderHolder(builder);
     }
 
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.close();
         super.exceptionCaught(ctx, cause);
     }
 
-    static class MessageDecoderHolder {
-
-        private final MessageSerial ser;
+    class MessageDecoderHolder {
 
         private final BodyBufRequestBuilder builder;
 
-        public MessageDecoderHolder(MessageSerial ser, BodyBufRequestBuilder builder) {
-            this.ser = ser;
+        public MessageDecoderHolder(BodyBufRequestBuilder builder) {
             this.builder = builder;
         }
 
@@ -111,7 +99,7 @@ public class NettyMessageDecoder extends ByteToMessageDecoder {
         }
 
         public boolean writeAndCheckComplete(ByteBuf in) throws IOException {
-            return ser.deSerializeComplete(builder, in);
+            return serial.deSerializeComplete(builder, in);
         }
     }
 }

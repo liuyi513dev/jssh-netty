@@ -13,10 +13,10 @@ public abstract class BytesMessageSerial extends ChunkFileMessageSerial implemen
 	@Override
 	public Object deSerialize(ByteBuf body) throws Exception {
 		byte[] array = body.array();
-		return deserial(array);
+		return deSerial(array);
 	}
 	
 	protected abstract byte[] serialToBytes(Object body);
 	
-	protected abstract Object deserial(byte[] bytes);
+	protected abstract Object deSerial(byte[] bytes);
 }

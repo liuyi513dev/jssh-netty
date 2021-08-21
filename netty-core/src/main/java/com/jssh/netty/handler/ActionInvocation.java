@@ -11,16 +11,13 @@ import java.util.Map;
 
 public class ActionInvocation {
 
-    private Method method;
+    private final Method method;
 
-    private Object target;
+    private final Object target;
 
-    private Class<?>[] parameterTypes;
+    private final Class<?>[] parameterTypes;
 
-    private Class<?> returnType;
-
-    public ActionInvocation() {
-    }
+    private final Class<?> returnType;
 
     public ActionInvocation(Method method, Object target) {
         super();
@@ -63,31 +60,15 @@ public class ActionInvocation {
         return method;
     }
 
-    public void setMethod(Method method) {
-        this.method = method;
-    }
-
     public Object getTarget() {
         return target;
-    }
-
-    public void setTarget(Object target) {
-        this.target = target;
     }
 
     public Class<?>[] getParameterTypes() {
         return parameterTypes;
     }
 
-    public void setParameterTypes(Class<?>[] parameterTypes) {
-        this.parameterTypes = parameterTypes;
-    }
-
     public Class<?> getReturnType() {
         return returnType;
-    }
-
-    public void setReturnType(Class<?> returnType) {
-        this.returnType = returnType;
     }
 }

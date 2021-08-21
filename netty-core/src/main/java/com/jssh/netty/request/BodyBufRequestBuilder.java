@@ -17,6 +17,6 @@ public class BodyBufRequestBuilder extends RequestBuilder {
 
 	@Override
 	public NettyRequest build() {
-		return new OriginalNettyRequest(super.build(), bodyBuf);
-	};
+		return bodyBuf != null ? new BodyBufNettyRequest(super.build(), bodyBuf) : super.build();
+	}
 }

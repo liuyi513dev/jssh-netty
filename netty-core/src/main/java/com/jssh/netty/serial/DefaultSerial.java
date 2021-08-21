@@ -1,6 +1,7 @@
 package com.jssh.netty.serial;
 
 import com.jssh.netty.exception.SerialException;
+import com.jssh.netty.serial.SerialHandler.InnerSerial;
 import com.jssh.netty.support.MarshallingProperties;
 import io.netty.buffer.ByteBuf;
 
@@ -70,20 +71,18 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         BIG_DECIMAL,
         BIG_INTEGER,
 
+        INNER_CUSTOM,
         CUSTOM
     }
 
-    interface InnerSerial {
-        void write(ByteBuf buf, Object obj) throws Exception;
+    private static final Map<Class<?>, InnerSerialHandler> static_class_serials = new HashMap<>();
+    private static final Map<Integer, InnerSerialHandler> static_type_serials = new HashMap<>();
 
-        Object read(ByteBuf buf) throws Exception;
-    }
+    private static final Map<Class<?>, SerialHandler> ext_class_serials = new HashMap<>();
+    private static final Map<Integer, SerialHandler> ext_type_serials = new HashMap<>();
 
-    public static Map<Class<?>, TYPE> static_types = new HashMap<>();
-    public static Map<TYPE, InnerSerial> static_serials = new HashMap<>();
-
-    public Map<Class<?>, TYPE> types = new HashMap<>();
-    public Map<TYPE, InnerSerial> serials = new HashMap<>();
+    private final Map<Class<?>, InnerSerialHandler> class_serials = new HashMap<>();
+    private final Map<Integer, InnerSerialHandler> type_serials = new HashMap<>();
 
     static {
         addStaticSerial(Byte.class, TYPE.BYTE, new ByteSerial());
@@ -104,7 +103,7 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         addStaticSerial(char[].class, TYPE.PRIMITIVE_CHAR_ARRAY, new PrimitiveCharArraySerial());
         addStaticSerial(boolean[].class, TYPE.PRIMITIVE_BOOLEAN_ARRAY, new PrimitiveBooleanArraySerial());
 
-        addStaticSerial(Byte[].class, TYPE.SHORT_ARRAY, new ByteArraySerial());
+        addStaticSerial(Byte[].class, TYPE.BYTE_ARRAY, new ByteArraySerial());
         addStaticSerial(Short[].class, TYPE.SHORT_ARRAY, new ShortArraySerial());
         addStaticSerial(Integer[].class, TYPE.INTEGER_ARRAY, new IntegerArraySerial());
         addStaticSerial(Long[].class, TYPE.LONG_ARRAY, new LongArraySerial());
@@ -119,55 +118,63 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         addStaticSerial(LocalDateTime.class, TYPE.LOCAL_DATE_TIME, new LocalDateTimeSerial());
         addStaticSerial(BigDecimal.class, TYPE.BIG_DECIMAL, new BigDecimalSerial());
         addStaticSerial(BigInteger.class, TYPE.BIG_INTEGER, new BigIntegerSerial());
+        addStaticSerial(null, TYPE.NULL, new NullObjectSerial());
     }
 
     public DefaultSerial() {
-        addSerial(HashMap.class, TYPE.HASH_MAP, new MapSerial(TYPE.HASH_MAP, HashMap.class));
-        addSerial(LinkedHashMap.class, TYPE.LINKED_HASH_MAP, new MapSerial(TYPE.LINKED_HASH_MAP, LinkedHashMap.class));
-        addSerial(Hashtable.class, TYPE.HASH_TABLE, new MapSerial(TYPE.HASH_TABLE, Hashtable.class));
-        addSerial(ArrayList.class, TYPE.ARRAY_LIST, new CollectionSerial(TYPE.ARRAY_LIST, ArrayList.class));
-        addSerial(LinkedList.class, TYPE.LINKED_LIST, new CollectionSerial(TYPE.LINKED_LIST, LinkedList.class));
-        addSerial(HashSet.class, TYPE.HASH_SET, new CollectionSerial(TYPE.HASH_SET, HashSet.class));
-        addSerial(LinkedHashSet.class, TYPE.LINKED_HASH_SET, new CollectionSerial(TYPE.LINKED_HASH_SET, LinkedHashSet.class));
+        addSerial(HashMap.class, TYPE.HASH_MAP, new MapSerial(HashMap.class));
+        addSerial(LinkedHashMap.class, TYPE.LINKED_HASH_MAP, new MapSerial(LinkedHashMap.class));
+        addSerial(Hashtable.class, TYPE.HASH_TABLE, new MapSerial(Hashtable.class));
+        addSerial(ArrayList.class, TYPE.ARRAY_LIST, new CollectionSerial(ArrayList.class));
+        addSerial(LinkedList.class, TYPE.LINKED_LIST, new CollectionSerial(LinkedList.class));
+        addSerial(HashSet.class, TYPE.HASH_SET, new CollectionSerial(HashSet.class));
+        addSerial(LinkedHashSet.class, TYPE.LINKED_HASH_SET, new CollectionSerial(LinkedHashSet.class));
         addSerial(Object[].class, TYPE.OBJECT_ARRAY, new ObjectArraySerial());
         addSerial(ChunkFile.class, TYPE.CHUNKED_FILE, new ChunkFileSerial());
 
-        addSerial(Void.class, TYPE.CUSTOM, new CustomSerial());
+        addSerial(Void.class, TYPE.INNER_CUSTOM, new InnerCustomSerial());
     }
 
-    public static void addStaticSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
-        static_types.put(jClass, type);
-        static_serials.put(type, serial);
+    private static void addStaticSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
+        InnerSerialHandler innerSerialHandler = new InnerSerialHandler(type, serial);
+        static_class_serials.put(jClass, innerSerialHandler);
+        static_type_serials.put(type.ordinal(), innerSerialHandler);
     }
 
-    public void addSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
-        types.put(jClass, type);
-        serials.put(type, serial);
+    private void addSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
+        InnerSerialHandler innerSerialHandler = new InnerSerialHandler(type, serial);
+        class_serials.put(jClass, innerSerialHandler);
+        type_serials.put(type.ordinal(), innerSerialHandler);
     }
 
-    public InnerSerial getSerial(Class<?> jClass) {
-        TYPE type = static_types.get(jClass);
-        if (type != null) {
-            return static_serials.get(type);
+    protected void addExtSerial(Class<?> jClass, SerialHandler serialHandler) {
+        assert serialHandler.getType() < 0;
+        ext_class_serials.put(jClass, serialHandler);
+        ext_type_serials.put(serialHandler.getType(), serialHandler);
+    }
+
+    public SerialHandler getSerial(Class<?> jClass) {
+        InnerSerialHandler handler = static_class_serials.get(jClass);
+        if (handler != null) {
+            return handler;
         }
-        type = types.get(jClass);
-        if (type != null) {
-            return serials.get(type);
+        handler = class_serials.get(jClass);
+        if (handler != null) {
+            return handler;
         }
-        return null;
+        return ext_class_serials.get(jClass);
     }
 
-    public InnerSerial getSerial(TYPE type) {
-        InnerSerial serial = static_serials.get(type);
-        if (serial != null) {
-            return serial;
+    public SerialHandler getSerial(Integer type) {
+        InnerSerialHandler handler = static_type_serials.get(type);
+        if (handler != null) {
+            return handler;
         }
-        return serials.get(type);
-    }
-
-    @Override
-    public boolean support(Object body) {
-        return true;
+        handler = type_serials.get(type);
+        if (handler != null) {
+            return handler;
+        }
+        return ext_type_serials.get(type);
     }
 
     @Override
@@ -180,30 +187,63 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
             buf.writeByte(TYPE.NULL.ordinal());
             return;
         }
+        SerialHandler serialHandler = getSerial(obj.getClass());
 
-        InnerSerial innerSerial = getSerial(obj.getClass());
-
-        if (innerSerial == null) {
-            if (obj instanceof CharSequence) {
-                innerSerial = getSerial(TYPE.STRING);
-            } else if (obj instanceof Date) {
-                innerSerial = getSerial(TYPE.DATE);
-            } else if (obj instanceof Map) {
-                innerSerial = getSerial(TYPE.HASH_MAP);
-            } else if (obj instanceof Set) {
-                innerSerial = getSerial(TYPE.HASH_SET);
-            } else if (obj instanceof Collection) {
-                innerSerial = getSerial(TYPE.ARRAY_LIST);
-            } else {
-                String className = obj.getClass().getName();
-                if (className.startsWith("java.") || className.startsWith("[")) {
-                    throw new SerialException("Unsupported data type : " + className);
-                }
-                innerSerial = getSerial(TYPE.CUSTOM);
-            }
+        if (serialHandler == null) {
+            serialHandler = getGeneralSerial(obj);
         }
 
-        innerSerial.write(buf, obj);
+        if (serialHandler == null) {
+            buf.markWriterIndex();
+            buf.writeByte(TYPE.CUSTOM.ordinal());
+            boolean write = writeByCustomSerial(buf, obj);
+            if (write) {
+                return;
+            }
+            buf.resetWriterIndex();
+        }
+
+        if (serialHandler == null) {
+            serialHandler = getInnerCustomSerial(obj);
+        }
+
+        if (serialHandler == null) {
+            throw new SerialException("Can not find the serial handler : " + obj);
+        }
+        buf.writeByte(serialHandler.getType());
+        serialHandler.getInnerSerial().write(buf, obj);
+    }
+
+    protected SerialHandler getGeneralSerial(Object obj) {
+        if (obj instanceof CharSequence) {
+            return getSerial(TYPE.STRING.ordinal());
+        } else if (obj instanceof Date) {
+            return getSerial(TYPE.DATE.ordinal());
+        } else if (obj instanceof Map) {
+            return getSerial(TYPE.HASH_MAP.ordinal());
+        } else if (obj instanceof Set) {
+            return getSerial(TYPE.HASH_SET.ordinal());
+        } else if (obj instanceof Collection) {
+            return getSerial(TYPE.ARRAY_LIST.ordinal());
+        } else {
+            return null;
+        }
+    }
+
+    protected boolean writeByCustomSerial(ByteBuf buf, Object obj) {
+        return false;
+    }
+
+    protected Object readByCustomSerial(ByteBuf buf) {
+        return null;
+    }
+
+    private SerialHandler getInnerCustomSerial(Object obj) {
+        String className = obj.getClass().getName();
+        if (className.startsWith("java.") || className.startsWith("[")) {
+            throw new SerialException("Unsupported data type : " + className);
+        }
+        return getSerial(TYPE.INNER_CUSTOM.ordinal());
     }
 
     @Override
@@ -213,26 +253,22 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
     private Object readObject(ByteBuf in) throws Exception {
         byte ordinal = in.readByte();
+        if (ordinal >= 0 && ordinal < TYPE.values().length) {
+            if (TYPE.values()[ordinal] == TYPE.NULL) {
+                return null;
+            }
+            if (TYPE.values()[ordinal] == TYPE.CUSTOM) {
+                return readByCustomSerial(in);
+            }
+        }
 
-        TYPE[] types = TYPE.values();
+        SerialHandler serialHandler = getSerial((int) ordinal);
 
-        if (ordinal >= types.length) {
+        if (serialHandler == null) {
             throw new SerialException("Unsupported serial type " + ordinal);
         }
 
-        TYPE type = types[ordinal];
-
-        if (type == TYPE.NULL) {
-            return null;
-        }
-
-        InnerSerial innerSerial = getSerial(type);
-
-        if (innerSerial == null) {
-            throw new SerialException("Unsupported serial type " + type);
-        }
-
-        return innerSerial.read(in);
+        return serialHandler.getInnerSerial().read(in);
     }
 
     private Object newObject(String className, Map<Object, Object> properties) throws Exception {
@@ -285,11 +321,22 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         }
     }
 
+    static class NullObjectSerial implements InnerSerial {
+
+        @Override
+        public void write(ByteBuf buf, Object obj) {
+        }
+
+        @Override
+        public Object read(ByteBuf buf) {
+            return null;
+        }
+    }
+
     static class ByteSerial implements InnerSerial {
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BYTE.ordinal());
             buf.writeByte((Byte) obj);
         }
 
@@ -303,7 +350,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.SHORT.ordinal());
             buf.writeShort((Short) obj);
         }
 
@@ -317,7 +363,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.INTEGER.ordinal());
             buf.writeInt((Integer) obj);
         }
 
@@ -331,7 +376,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BOOLEAN.ordinal());
             buf.writeBoolean((Boolean) obj);
         }
 
@@ -345,7 +389,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.LONG.ordinal());
             buf.writeLong((Long) obj);
         }
 
@@ -359,7 +402,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.DOUBLE.ordinal());
             buf.writeDouble((Double) obj);
         }
 
@@ -373,7 +415,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.FLOAT.ordinal());
             buf.writeFloat((Float) obj);
         }
 
@@ -387,7 +428,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.STRING.ordinal());
             String value = (String) obj;
             int lenIndex = buf.writerIndex();
             buf.writeInt(0);
@@ -407,7 +447,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.CHARACTER.ordinal());
             buf.writeChar((Character) obj);
         }
 
@@ -421,7 +460,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BIG_DECIMAL.ordinal());
             String value = obj.toString();
             int lenIndex = buf.writerIndex();
             buf.writeInt(0);
@@ -441,7 +479,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BIG_INTEGER.ordinal());
             String value = obj.toString();
             int lenIndex = buf.writerIndex();
             buf.writeInt(0);
@@ -461,7 +498,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_SHORT_ARRAY.ordinal());
             short[] value = (short[]) obj;
             buf.writeInt(value.length);
             for (short i : value) {
@@ -483,7 +519,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_INT_ARRAY.ordinal());
             int[] value = (int[]) obj;
             buf.writeInt(value.length);
             for (int i : value) {
@@ -505,7 +540,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_LONG_ARRAY.ordinal());
             long[] value = (long[]) obj;
             buf.writeInt(value.length);
             for (long i : value) {
@@ -527,7 +561,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_FLOAT_ARRAY.ordinal());
             float[] value = (float[]) obj;
             buf.writeInt(value.length);
             for (float i : value) {
@@ -549,7 +582,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_DOUBLE_ARRAY.ordinal());
             double[] value = (double[]) obj;
             buf.writeInt(value.length);
             for (double i : value) {
@@ -571,7 +603,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_CHAR_ARRAY.ordinal());
             char[] value = (char[]) obj;
             buf.writeInt(value.length);
             for (char i : value) {
@@ -593,7 +624,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_BOOLEAN_ARRAY.ordinal());
             boolean[] value = (boolean[]) obj;
             buf.writeInt(value.length);
             for (boolean i : value) {
@@ -615,7 +645,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BYTE_ARRAY.ordinal());
             Byte[] value = (Byte[]) obj;
             buf.writeInt(value.length);
             for (byte i : value) {
@@ -637,7 +666,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.SHORT_ARRAY.ordinal());
             Short[] value = (Short[]) obj;
             buf.writeInt(value.length);
             for (short i : value) {
@@ -659,7 +687,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.INTEGER_ARRAY.ordinal());
             Integer[] value = (Integer[]) obj;
             buf.writeInt(value.length);
             for (int i : value) {
@@ -681,7 +708,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.LONG_ARRAY.ordinal());
             Long[] value = (Long[]) obj;
             buf.writeInt(value.length);
             for (long i : value) {
@@ -703,7 +729,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.FLOAT_ARRAY.ordinal());
             Float[] value = (Float[]) obj;
             buf.writeInt(value.length);
             for (float i : value) {
@@ -725,7 +750,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.DOUBLE_ARRAY.ordinal());
             Double[] value = (Double[]) obj;
             buf.writeInt(value.length);
             for (double i : value) {
@@ -747,7 +771,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.CHARACTER_ARRAY.ordinal());
             Character[] value = (Character[]) obj;
             buf.writeInt(value.length);
             for (char i : value) {
@@ -769,7 +792,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.BOOLEAN_ARRAY.ordinal());
             Boolean[] value = (Boolean[]) obj;
             buf.writeInt(value.length);
             for (boolean i : value) {
@@ -791,7 +813,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.DATE.ordinal());
             long value = ((Date) obj).getTime();
             buf.writeLong(value);
         }
@@ -806,7 +827,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.LOCAL_DATE.ordinal());
             long value = ((LocalDate) obj).toEpochDay();
             buf.writeLong(value);
         }
@@ -821,7 +841,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.LOCAL_DATE_TIME.ordinal());
             long value = ((LocalDateTime) obj).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
             buf.writeLong(value);
         }
@@ -837,7 +856,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.CHUNKED_FILE.ordinal());
             buf.writeLong(((ChunkFile) obj).getLength());
             addSerChunkFile((ChunkFile) obj);
         }
@@ -855,14 +873,13 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeByte(TYPE.PRIMITIVE_BYTE_ARRAY.ordinal());
             byte[] value = (byte[]) obj;
             buf.writeInt(value.length);
             buf.writeBytes(value);
         }
 
         @Override
-        public Object read(ByteBuf buf) throws IOException {
+        public Object read(ByteBuf buf) {
             int len = buf.readInt();
             byte[] byteArray = new byte[len];
             buf.readBytes(byteArray);
@@ -874,7 +891,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
         @Override
         public void write(ByteBuf buf, Object obj) throws Exception {
-            buf.writeByte(TYPE.OBJECT_ARRAY.ordinal());
             Object[] value = (Object[]) obj;
             buf.writeInt(value.length);
             for (Object val : value) {
@@ -894,17 +910,14 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
     class MapSerial implements InnerSerial {
 
-        private final TYPE type;
         private final Class<? extends Map> jClass;
 
-        public MapSerial(TYPE type, Class<? extends Map> jClass) {
-            this.type = type;
+        public MapSerial(Class<? extends Map> jClass) {
             this.jClass = jClass;
         }
 
         @Override
         public void write(ByteBuf buf, Object obj) throws Exception {
-            buf.writeByte(type.ordinal());
             Map<?, ?> value = (Map<?, ?>) obj;
             buf.writeInt(value.size());
             for (Map.Entry<?, ?> entry : value.entrySet()) {
@@ -929,17 +942,14 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
 
     class CollectionSerial implements InnerSerial {
 
-        private final TYPE type;
         private final Class<? extends Collection> jClass;
 
-        public CollectionSerial(TYPE type, Class<? extends Collection> jClass) {
-            this.type = type;
+        public CollectionSerial(Class<? extends Collection> jClass) {
             this.jClass = jClass;
         }
 
         @Override
         public void write(ByteBuf buf, Object obj) throws Exception {
-            buf.writeByte(type.ordinal());
             Collection<?> value = (Collection<?>) obj;
             buf.writeInt(value.size());
             for (Object val : value) {
@@ -957,11 +967,10 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         }
     }
 
-    class CustomSerial implements InnerSerial {
+    class InnerCustomSerial implements InnerSerial {
 
         @Override
         public void write(ByteBuf buf, Object obj) throws Exception {
-            buf.writeByte(TYPE.CUSTOM.ordinal());
 
             MarshallingProperties mp = null;
             Class<?> clazz = obj.getClass();
@@ -999,6 +1008,28 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
             String className = (String) readObject(buf);
             Map<Object, Object> value = (Map<Object, Object>) readObject(buf);
             return newObject(className, value);
+        }
+    }
+
+    static class InnerSerialHandler implements SerialHandler {
+
+        private final TYPE type;
+
+        private final InnerSerial innerSerial;
+
+        public InnerSerialHandler(TYPE type, InnerSerial innerSerial) {
+            this.type = type;
+            this.innerSerial = innerSerial;
+        }
+
+        @Override
+        public int getType() {
+            return type.ordinal();
+        }
+
+        @Override
+        public InnerSerial getInnerSerial() {
+            return innerSerial;
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.jssh.netty.autoconfigure;
 
+import com.jssh.netty.serial.FileMessageSerialFactory;
 import com.jssh.netty.server.ClientValidator;
 import com.jssh.netty.server.DefaultServerNettyManager;
 import com.jssh.netty.spring.ActionScanner;
@@ -37,11 +38,12 @@ public class JsshNettyServerAutoConfiguration {
     @Bean(name = "server", destroyMethod = "close")
     @ConditionalOnMissingBean
     @ConditionalOnSingleCandidate(ClientValidator.class)
-    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator) {
+    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, FileMessageSerialFactory fileMessageSerialFactory) {
         DefaultServerNettyManager manager = new DefaultServerNettyManager();
         manager.setClientValidator(clientValidator);
         manager.setTcpPort(new InetSocketAddress(properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
+        manager.setFileMessageSerialFactory(fileMessageSerialFactory);
         return manager;
     }
 

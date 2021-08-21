@@ -1,6 +1,5 @@
 package com.jssh.netty.request;
 
-import com.jssh.netty.serial.BodyBuf;
 import com.jssh.netty.server.ClientInfo;
 
 public interface NettyRequest {
@@ -41,11 +40,9 @@ public interface NettyRequest {
 
     void setBody(Object body);
 
-    NettyRequest cloneRequest();
-
     ClientInfo<?> getClientInfo();
 
     void setClientInfo(ClientInfo<?> clientInfo);
 
-    BodyBuf getBodyBuf();
+    NettyRequest cloneRequest();
 }

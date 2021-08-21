@@ -2,11 +2,11 @@ package com.jssh.netty.request;
 
 import com.jssh.netty.serial.BodyBuf;
 
-public class OriginalNettyRequest extends BaseNettyRequest implements NettyRequest {
+public class BodyBufNettyRequest extends BaseNettyRequest implements BufNettyRequest {
 
-    private BodyBuf bodyBuf;
+    private final BodyBuf bodyBuf;
 
-    public OriginalNettyRequest(NettyRequest request, BodyBuf bodyBuf) {
+    public BodyBufNettyRequest(NettyRequest request, BodyBuf bodyBuf) {
         super(request);
         this.bodyBuf = bodyBuf;
     }
@@ -41,13 +41,13 @@ public class OriginalNettyRequest extends BaseNettyRequest implements NettyReque
         return super.toString();
     }
 
-    static class OriginalNewNettyRequest extends BaseNettyRequest implements NettyRequest {
+    static class OriginalNewNettyRequest extends BaseNettyRequest implements BufNettyRequest {
 
         private boolean useOriginal;
 
-        private OriginalNettyRequest original;
+        private BodyBufNettyRequest original;
 
-        public OriginalNewNettyRequest(OriginalNettyRequest original, boolean useOriginal) {
+        public OriginalNewNettyRequest(BodyBufNettyRequest original, boolean useOriginal) {
             super(original);
             setRequestId(null);
             setResponseId(null);

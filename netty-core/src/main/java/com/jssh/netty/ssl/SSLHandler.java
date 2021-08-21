@@ -24,16 +24,13 @@ public class SSLHandler {
         }
     }
 
-    private void initSSLContext() throws KeyStoreException, FileNotFoundException, IOException,
+    private void initSSLContext() throws KeyStoreException, IOException,
             NoSuchAlgorithmException,
             CertificateException, UnrecoverableKeyException, KeyManagementException {
 
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        InputStream keyStoreStream = this.getClass().getResourceAsStream(ssl.getKeyStorePath());
-        if (keyStoreStream == null && new File(ssl.getKeyStorePath()).exists()) {
-            keyStoreStream = new FileInputStream(ssl.getKeyStorePath());
-        }
-        try (InputStream in = keyStoreStream) {
+
+        try (InputStream in = loadInputStream(ssl.getKeyStorePath())) {
             keyStore.load(in, ssl.getKeyStorePassword().toCharArray());
         }
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
@@ -45,11 +42,7 @@ public class SSLHandler {
             trustCertificateStore = KeyStore.getInstance(KeyStore.getDefaultType());
             trustCertificateStore.load(null, null);
 
-            InputStream trustCertificateStream = this.getClass().getResourceAsStream(ssl.getTrustCertificatePath());
-            if (trustCertificateStream == null && new File(ssl.getTrustCertificatePath()).exists()) {
-                trustCertificateStream = new FileInputStream(ssl.getTrustCertificatePath());
-            }
-            try (InputStream in = trustCertificateStream) {
+            try (InputStream in = loadInputStream(ssl.getTrustCertificatePath())) {
                 trustCertificateStore.setCertificateEntry(ssl.getTrustCertificateAlias(),
                         CertificateFactory.getInstance("X.509").generateCertificate(in));
             }
@@ -60,6 +53,14 @@ public class SSLHandler {
 
         this.sslContext = SSLContext.getInstance(ssl.getProtocol());
         this.sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+    }
+
+    private InputStream loadInputStream(String filePath) throws FileNotFoundException {
+        InputStream stream = this.getClass().getResourceAsStream(filePath);
+        if (stream == null && new File(filePath).exists()) {
+            stream = new FileInputStream(filePath);
+        }
+        return stream;
     }
 
     public SSLEngine createSSLEngine() {

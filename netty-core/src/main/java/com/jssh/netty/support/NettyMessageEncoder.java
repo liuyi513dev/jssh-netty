@@ -1,10 +1,11 @@
 package com.jssh.netty.support;
 
+import com.jssh.netty.request.BufNettyRequest;
 import com.jssh.netty.request.NettyRequest;
 import com.jssh.netty.serial.BodyBuf;
 import com.jssh.netty.serial.ChunkFile;
 import com.jssh.netty.serial.DefaultSerial;
-import com.jssh.netty.serial.MessageSerial;
+import com.jssh.netty.serial.FileMessageSerial;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -15,21 +16,20 @@ import java.util.List;
 public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
 
     private final boolean isBodyBuf;
-    private final MessageSerial serial;
-    private final MessageSerial bodySerial;
+
+    private final FileMessageSerial serial;
 
     public NettyMessageEncoder() {
-        this(true, null);
+        this(new DefaultSerial());
     }
 
-    public NettyMessageEncoder(MessageSerial bodySerial) {
-        this(true, bodySerial);
+    public NettyMessageEncoder(FileMessageSerial serial) {
+        this(true, serial);
     }
 
-    public NettyMessageEncoder(boolean isBodyBuf, MessageSerial bodySerial) {
-        this.serial = new DefaultSerial();
+    public NettyMessageEncoder(boolean isBodyBuf, FileMessageSerial serial) {
+        this.serial = serial;
         this.isBodyBuf = isBodyBuf;
-        this.bodySerial = bodySerial;
     }
 
     @Override
@@ -49,9 +49,9 @@ public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
         serial.serialize(buf, request.getResponseId());
         serial.serialize(buf, request.getHeaders());
 
-        if (isBodyBuf && request.getBodyBuf() != null) {
+        if (isBodyBuf && request instanceof BufNettyRequest) {
 
-            BodyBuf bodyBuf = request.getBodyBuf();
+            BodyBuf bodyBuf = ((BufNettyRequest) request).getBodyBuf();
             synchronized (bodyBuf) {
                 ByteBuf body = bodyBuf.getBodyBuf();
                 body.markReaderIndex();
@@ -61,9 +61,9 @@ public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
 
             out.add(buf);
 
-            serial.afterSerialize(out);
+            serial.writeSerChunkFiles(out);
 
-            List<ChunkFile> bodyBufFiles = request.getBodyBuf().getBodyBufFiles();
+            List<ChunkFile> bodyBufFiles = bodyBuf.getBodyBufFiles();
 
             if (bodyBufFiles != null && bodyBufFiles.size() > 0) {
                 for (ChunkFile f : bodyBufFiles) {
@@ -72,19 +72,9 @@ public class NettyMessageEncoder extends MessageToMessageEncoder<NettyRequest> {
             }
 
         } else {
-            Object body = request.getBody();
-            if (body != null && bodySerial != null && bodySerial.support(body)) {
-                buf.writeBoolean(false);
-                bodySerial.serialize(buf, body);
-                out.add(buf);
-                serial.afterSerialize(out);
-                bodySerial.afterSerialize(out);
-            } else {
-                buf.writeBoolean(true);
-                serial.serialize(buf, body);
-                out.add(buf);
-                serial.afterSerialize(out);
-            }
+            serial.serialize(buf, request.getBody());
+            out.add(buf);
+            serial.writeSerChunkFiles(out);
         }
     }
 }

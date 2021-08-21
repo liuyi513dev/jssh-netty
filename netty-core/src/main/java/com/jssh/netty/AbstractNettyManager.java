@@ -12,8 +12,9 @@ import com.jssh.netty.handler.ReturnValue;
 import com.jssh.netty.listener.MessageListener;
 import com.jssh.netty.listener.NettyResponse;
 import com.jssh.netty.request.*;
+import com.jssh.netty.serial.DefaultFileMessageSerialFactory;
 import com.jssh.netty.serial.ErrorObject;
-import com.jssh.netty.serial.MessageSerial;
+import com.jssh.netty.serial.FileMessageSerialFactory;
 import com.jssh.netty.ssl.SSLHandler;
 import com.jssh.netty.support.NettyMessageDecoder;
 import com.jssh.netty.support.NettyMessageEncoder;
@@ -80,7 +81,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     private RequestId requestId = new DefaultRequestId();
 
-    private MessageSerial messageSerial;
+    private FileMessageSerialFactory fileMessageSerialFactory = new DefaultFileMessageSerialFactory();
 
     public void initExecutors() throws Exception {
         this.executor = Executors.newScheduledThreadPool(getConfiguration().getExecutorSize());
@@ -143,8 +144,8 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         //处理文件传输
         pipeline.addLast("streamer", new ChunkedWriteHandler());
         //解码器编码器
-        pipeline.addLast("decoder", new NettyMessageDecoder(messageSerial));
-        pipeline.addLast("encoder", new NettyMessageEncoder(messageSerial));
+        pipeline.addLast("decoder", new NettyMessageDecoder(fileMessageSerialFactory.createFileMessageSerial()));
+        pipeline.addLast("encoder", new NettyMessageEncoder(fileMessageSerialFactory.createFileMessageSerial()));
         pipeline.addLast("writeTO", new WriteTimeoutHandler(getConfiguration().getWriteTimeout()));
         pipeline.addLast("handler", handler);
     }
@@ -724,14 +725,6 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         this.ssl = ssl;
     }
 
-    public MessageSerial getMessageSerial() {
-        return messageSerial;
-    }
-
-    public void setMessageSerial(MessageSerial messageSerial) {
-        this.messageSerial = messageSerial;
-    }
-
     public RequestId getRequestId() {
         return requestId;
     }
@@ -747,5 +740,13 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     public void setConfiguration(Configuration configuration) {
         this.configuration = configuration;
+    }
+
+    public FileMessageSerialFactory getFileMessageSerialFactory() {
+        return fileMessageSerialFactory;
+    }
+
+    public void setFileMessageSerialFactory(FileMessageSerialFactory fileMessageSerialFactory) {
+        this.fileMessageSerialFactory = fileMessageSerialFactory;
     }
 }

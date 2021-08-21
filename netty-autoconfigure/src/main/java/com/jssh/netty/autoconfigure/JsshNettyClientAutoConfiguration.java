@@ -2,6 +2,7 @@ package com.jssh.netty.autoconfigure;
 
 import com.jssh.netty.client.ClientInfoProvider;
 import com.jssh.netty.client.DefaultClientNettyManager;
+import com.jssh.netty.serial.FileMessageSerialFactory;
 import com.jssh.netty.spring.ActionScanner;
 import com.jssh.netty.spring.ClientEndpointConfigurer;
 import org.springframework.beans.factory.BeanFactory;
@@ -37,11 +38,12 @@ public class JsshNettyClientAutoConfiguration {
     @Bean(name = "client", destroyMethod = "close")
     @ConditionalOnMissingBean
     @ConditionalOnSingleCandidate(ClientInfoProvider.class)
-    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider) {
+    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, FileMessageSerialFactory fileMessageSerialFactory) {
         DefaultClientNettyManager manager = new DefaultClientNettyManager();
         manager.setClientInfoProvider(clientInfoProvider);
         manager.setTcpPort(new InetSocketAddress(properties.getHost(), properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
+        manager.setFileMessageSerialFactory(fileMessageSerialFactory);
         return manager;
     }
 
