@@ -17,10 +17,6 @@
 @Configuration
 public class ServerNettyConfig {
 
-    @Resource
-    @Lazy
-    private DefaultServerNettyManager serverNettyManager;
-
     @Bean
     public ClientValidator clientValidator() {
         return param -> {
@@ -29,11 +25,6 @@ public class ServerNettyConfig {
             //TODO 检查clientId合法性
             return new SimpleClientInfo(clientId);
         };
-    }
-
-    @EventListener(ApplicationStartedEvent.class)
-    public void startNetty() throws Exception {
-        serverNettyManager.start();
     }
 }
 ```
@@ -87,10 +78,6 @@ public class ServerMessageService {
 @Configuration
 public class ClientNettyConfig {
 
-    @Resource
-    @Lazy
-    private DefaultClientNettyManager defaultClientNettyManager;
-
     @Bean
     public ClientInfoProvider clientInfoProvider() {
         return (() -> {
@@ -100,11 +87,6 @@ public class ClientNettyConfig {
             clientInfo.put("clientId", clientId);
             return clientInfo;
         });
-    }
-
-    @EventListener(ApplicationStartedEvent.class)
-    public void startNetty() throws Exception {
-        defaultClientNettyManager.start();
     }
 }
 ```

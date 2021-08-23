@@ -261,13 +261,14 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         try {
             responseValue = requestHandler.handleRequest(ctx, request);
         } catch (Exception e) {
-            while (e instanceof InvocationTargetException && e.getCause() != null) {
-                e = (Exception) e.getCause();
+            Throwable throwable = e;
+            while (throwable instanceof InvocationTargetException && throwable.getCause() != null) {
+                throwable = throwable.getCause();
             }
 
-            logger.error(e.getMessage(), e);
+            logger.error(e.getMessage(), throwable);
             response = RequestBuilder.builder().setResponseId(request.getRequestId())
-                    .setRequestAction(ERROR_REQUEST).setBody(new ErrorObject(e)).build();
+                    .setRequestAction(ERROR_REQUEST).setBody(new ErrorObject(throwable)).build();
         }
 
         if (responseValue != null && responseValue.isReturn()) {

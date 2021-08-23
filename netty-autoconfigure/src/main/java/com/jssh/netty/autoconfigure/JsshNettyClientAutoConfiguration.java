@@ -35,7 +35,7 @@ public class JsshNettyClientAutoConfiguration {
         this.properties = properties;
     }
 
-    @Bean(name = "client", destroyMethod = "close")
+    @Bean(name = "client", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
     @ConditionalOnSingleCandidate(ClientInfoProvider.class)
     public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, FileMessageSerialFactory fileMessageSerialFactory) {

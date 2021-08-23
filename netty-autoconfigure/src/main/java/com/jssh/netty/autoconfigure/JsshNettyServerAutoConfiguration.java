@@ -35,7 +35,7 @@ public class JsshNettyServerAutoConfiguration {
         this.properties = properties;
     }
 
-    @Bean(name = "server", destroyMethod = "close")
+    @Bean(name = "server", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
     @ConditionalOnSingleCandidate(ClientValidator.class)
     public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, FileMessageSerialFactory fileMessageSerialFactory) {
@@ -52,6 +52,12 @@ public class JsshNettyServerAutoConfiguration {
     @ConditionalOnSingleCandidate(DefaultServerNettyManager.class)
     public ActionScanner actionScanner(DefaultServerNettyManager nettyManager) {
         return new ActionScanner(nettyManager);
+    }
+
+    @Configuration
+    @Import(AutoConfiguredServerEndpointRegistrar.class)
+    @ConditionalOnMissingBean(ServerEndpointConfigurer.class)
+    static class EnableServerEndpointConfiguration {
     }
 
     public static class AutoConfiguredServerEndpointRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar {
@@ -76,14 +82,6 @@ public class JsshNettyServerAutoConfiguration {
         public void setBeanFactory(BeanFactory beanFactory) {
             this.beanFactory = beanFactory;
         }
-
-    }
-
-    @Configuration
-    @Import(AutoConfiguredServerEndpointRegistrar.class)
-    @ConditionalOnMissingBean(ServerEndpointConfigurer.class)
-    static class EnableServerEndpointConfiguration {
-
 
     }
 }

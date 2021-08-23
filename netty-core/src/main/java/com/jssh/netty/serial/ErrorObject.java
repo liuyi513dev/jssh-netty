@@ -10,7 +10,7 @@ public class ErrorObject {
 		
 	}
 	
-	public ErrorObject(Exception e) {
+	public ErrorObject(Throwable e) {
 		this.message = e.getMessage();
 		this.errorClass = e.getClass().toString();
 	}
