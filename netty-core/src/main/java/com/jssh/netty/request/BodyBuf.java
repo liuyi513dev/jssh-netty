@@ -1,5 +1,6 @@
-package com.jssh.netty.serial;
+package com.jssh.netty.request;
 
+import com.jssh.netty.serial.NettyFile;
 import io.netty.buffer.ByteBuf;
 
 import java.util.List;

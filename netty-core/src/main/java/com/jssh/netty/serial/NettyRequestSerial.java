@@ -1,9 +1,6 @@
 package com.jssh.netty.serial;
 
-import com.jssh.netty.request.BodyBufRequestBuilder;
-import com.jssh.netty.request.BufNettyRequest;
-import com.jssh.netty.request.HeaderList;
-import com.jssh.netty.request.NettyRequest;
+import com.jssh.netty.request.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.stream.ChunkedFile;
 
@@ -164,15 +161,18 @@ public class NettyRequestSerial extends DefaultSerial {
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            buf.writeLong(((NettyFile) obj).getLength());
+            NettyFile nettyFile = (NettyFile) obj;
+            buf.writeLong(nettyFile.getLength());
+            SerialUtils.writeLengthCharSequence(buf, nettyFile.getFileName());
             getSerialNettyFiles().add((NettyFile) obj);
         }
 
         @Override
         public Object read(ByteBuf buf) throws IOException {
             long length = buf.readLong();
+            String fileName = SerialUtils.readCharSequence(buf);
             File tempFile = File.createTempFile(UUID.randomUUID().toString(), ".file-cache");
-            NettyFile nettyFile = new NettyFile(tempFile, length);
+            NettyFile nettyFile = new NettyFile(tempFile, length, fileName);
             getDeSerialNettyFiles().add(nettyFile);
             return nettyFile;
         }

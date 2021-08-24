@@ -11,8 +11,6 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,7 +20,6 @@ import java.util.*;
 public class DefaultSerial implements MessageSerial {
 
     public static final String $_CLASS_NAME_$ = "$className$";
-    public static final Charset default_charset = StandardCharsets.UTF_8;
 
     enum TYPE {
         NULL,
@@ -427,17 +424,12 @@ public class DefaultSerial implements MessageSerial {
         @Override
         public void write(ByteBuf buf, Object obj) {
             String value = (String) obj;
-            int lenIndex = buf.writerIndex();
-            buf.writeInt(0);
-            int len = buf.writeCharSequence(value, default_charset);
-            buf.markWriterIndex();
-            buf.setInt(lenIndex, len);
-            buf.resetWriterIndex();
+            SerialUtils.writeLengthCharSequence(buf, value);
         }
 
         @Override
         public Object read(ByteBuf buf) {
-            return buf.readCharSequence(buf.readInt(), default_charset).toString();
+            return SerialUtils.readCharSequence(buf);
         }
     }
 
@@ -458,18 +450,12 @@ public class DefaultSerial implements MessageSerial {
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            String value = obj.toString();
-            int lenIndex = buf.writerIndex();
-            buf.writeInt(0);
-            int len = buf.writeCharSequence(value, default_charset);
-            buf.markWriterIndex();
-            buf.setInt(lenIndex, len);
-            buf.resetWriterIndex();
+            SerialUtils.writeLengthCharSequence(buf, obj.toString());
         }
 
         @Override
         public Object read(ByteBuf buf) {
-            return new BigDecimal(buf.readCharSequence(buf.readInt(), default_charset).toString());
+            return new BigDecimal(SerialUtils.readCharSequence(buf));
         }
     }
 
@@ -477,18 +463,12 @@ public class DefaultSerial implements MessageSerial {
 
         @Override
         public void write(ByteBuf buf, Object obj) {
-            String value = obj.toString();
-            int lenIndex = buf.writerIndex();
-            buf.writeInt(0);
-            int len = buf.writeCharSequence(value, default_charset);
-            buf.markWriterIndex();
-            buf.setInt(lenIndex, len);
-            buf.resetWriterIndex();
+            SerialUtils.writeLengthCharSequence(buf, obj.toString());
         }
 
         @Override
         public Object read(ByteBuf buf) {
-            return new BigInteger(buf.readCharSequence(buf.readInt(), default_charset).toString());
+            return new BigInteger(SerialUtils.readCharSequence(buf));
         }
     }
 

@@ -1,7 +1,5 @@
 package com.jssh.netty.request;
 
-import com.jssh.netty.serial.BodyBuf;
-
 public class BodyBufNettyRequest extends BaseNettyRequest implements BufNettyRequest {
 
     private final BodyBuf bodyBuf;

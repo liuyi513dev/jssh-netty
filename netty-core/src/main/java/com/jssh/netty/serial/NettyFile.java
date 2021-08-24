@@ -11,6 +11,7 @@ public class NettyFile {
 
 	private final File srcFile;
 	private final long length;
+	private final String fileName;
 
 	private RandomAccessFile outfile;
 	private FileChannel output;
@@ -21,12 +22,13 @@ public class NettyFile {
 	}
 
 	public NettyFile(File file) {
-		this(file, file.length());
+		this(file, file.length(), file.getName());
 	}
 
-	public NettyFile(File file, long length) {
+	public NettyFile(File file, long length, String fileName) {
 		this.srcFile = file;
 		this.length = length;
+		this.fileName = fileName;
 	}
 
 	public long getLength() {
@@ -35,6 +37,10 @@ public class NettyFile {
 
 	public File getSrcFile() {
 		return srcFile;
+	}
+
+	public String getFileName() {
+		return fileName;
 	}
 
 	public synchronized boolean writeFrom(ByteBuf in) throws IOException {
