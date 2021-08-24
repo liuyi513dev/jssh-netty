@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface Server extends ServerMessageExchange {
 
-	default void addListener(List<ServerNettyListener> listeners) {
+	default void addListeners(List<ServerNettyListener> listeners) {
 		if (listeners != null) {
 			for (ServerNettyListener listener : listeners) {
 				addListener(listener);

@@ -3,6 +3,7 @@ package com.jssh.netty.autoconfigure;
 import com.jssh.netty.serial.MessageSerialFactory;
 import com.jssh.netty.server.ClientValidator;
 import com.jssh.netty.server.DefaultServerNettyManager;
+import com.jssh.netty.server.ServerNettyListener;
 import com.jssh.netty.server.SimpleClientInfo;
 import com.jssh.netty.spring.ActionScanner;
 import com.jssh.netty.spring.ServerEndpointConfigurer;
@@ -24,6 +25,7 @@ import org.springframework.util.StringUtils;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 @EnableConfigurationProperties(JsshNettyServerProperties.class)
@@ -38,12 +40,13 @@ public class JsshNettyServerAutoConfiguration {
 
     @Bean(name = "server", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
-    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, MessageSerialFactory messageSerialFactory) {
+    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, MessageSerialFactory messageSerialFactory, Optional<List<ServerNettyListener>> listeners) {
         DefaultServerNettyManager manager = new DefaultServerNettyManager();
         manager.setClientValidator(clientValidator);
         manager.setTcpPort(new InetSocketAddress(properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
         manager.setMessageSerialFactory(messageSerialFactory);
+        listeners.ifPresent(manager::addListeners);
         return manager;
     }
 

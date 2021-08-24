@@ -1,11 +1,11 @@
 package com.jssh.netty.autoconfigure;
 
 import com.jssh.netty.client.ClientInfoProvider;
+import com.jssh.netty.client.ClientNettyListener;
 import com.jssh.netty.client.DefaultClientNettyManager;
 import com.jssh.netty.serial.MessageSerialFactory;
 import com.jssh.netty.spring.ActionScanner;
 import com.jssh.netty.spring.ClientEndpointConfigurer;
-import io.netty.channel.ChannelHandlerContext;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 @EnableConfigurationProperties(JsshNettyClientProperties.class)
@@ -38,12 +39,13 @@ public class JsshNettyClientAutoConfiguration {
 
     @Bean(name = "client", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
-    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, MessageSerialFactory messageSerialFactory) {
+    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, MessageSerialFactory messageSerialFactory, Optional<List<ClientNettyListener>> listeners) {
         DefaultClientNettyManager manager = new DefaultClientNettyManager();
         manager.setClientInfoProvider(clientInfoProvider);
         manager.setTcpPort(new InetSocketAddress(properties.getHost(), properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
         manager.setMessageSerialFactory(messageSerialFactory);
+        listeners.ifPresent(manager::addListeners);
         return manager;
     }
 

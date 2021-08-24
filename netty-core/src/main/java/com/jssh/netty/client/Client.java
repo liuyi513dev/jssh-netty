@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface Client extends ClientMessageExchange {
 
-    default void addListener(List<ClientNettyListener> listeners) {
+    default void addListeners(List<ClientNettyListener> listeners) {
         if (listeners != null) {
             for (ClientNettyListener listener : listeners) {
                 addListener(listener);
