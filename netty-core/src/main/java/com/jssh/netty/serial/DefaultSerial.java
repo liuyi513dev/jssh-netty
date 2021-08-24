@@ -8,7 +8,6 @@ import io.netty.buffer.ByteBuf;
 import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -20,7 +19,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
-public class DefaultSerial extends ChunkFileMessageSerial implements MessageSerial {
+public class DefaultSerial implements MessageSerial {
 
     public static final String $_CLASS_NAME_$ = "$className$";
     public static final Charset default_charset = StandardCharsets.UTF_8;
@@ -67,7 +66,7 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         DATE,
         LOCAL_DATE,
         LOCAL_DATE_TIME,
-        CHUNKED_FILE,
+        NETTY_FILE,
         BIG_DECIMAL,
         BIG_INTEGER,
 
@@ -85,69 +84,68 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
     private final Map<Integer, InnerSerialHandler> type_serials = new HashMap<>();
 
     static {
-        addStaticSerial(Byte.class, TYPE.BYTE, new ByteSerial());
-        addStaticSerial(Short.class, TYPE.SHORT, new ShortSerial());
-        addStaticSerial(Integer.class, TYPE.INTEGER, new IntSerial());
-        addStaticSerial(Long.class, TYPE.LONG, new LongSerial());
-        addStaticSerial(Float.class, TYPE.FLOAT, new FloatSerial());
-        addStaticSerial(Double.class, TYPE.DOUBLE, new DoubleSerial());
-        addStaticSerial(Character.class, TYPE.CHARACTER, new CharacterSerial());
-        addStaticSerial(Boolean.class, TYPE.BOOLEAN, new BooleanSerial());
+        addStaticInnerSerial(Byte.class, TYPE.BYTE, new ByteSerial());
+        addStaticInnerSerial(Short.class, TYPE.SHORT, new ShortSerial());
+        addStaticInnerSerial(Integer.class, TYPE.INTEGER, new IntSerial());
+        addStaticInnerSerial(Long.class, TYPE.LONG, new LongSerial());
+        addStaticInnerSerial(Float.class, TYPE.FLOAT, new FloatSerial());
+        addStaticInnerSerial(Double.class, TYPE.DOUBLE, new DoubleSerial());
+        addStaticInnerSerial(Character.class, TYPE.CHARACTER, new CharacterSerial());
+        addStaticInnerSerial(Boolean.class, TYPE.BOOLEAN, new BooleanSerial());
 
-        addStaticSerial(byte[].class, TYPE.PRIMITIVE_BYTE_ARRAY, new PrimitiveByteArraySerial());
-        addStaticSerial(short[].class, TYPE.PRIMITIVE_SHORT_ARRAY, new PrimitiveShortArraySerial());
-        addStaticSerial(int[].class, TYPE.PRIMITIVE_INT_ARRAY, new PrimitiveIntegerArraySerial());
-        addStaticSerial(long[].class, TYPE.PRIMITIVE_LONG_ARRAY, new PrimitiveLongArraySerial());
-        addStaticSerial(float[].class, TYPE.PRIMITIVE_FLOAT_ARRAY, new PrimitiveFloatArraySerial());
-        addStaticSerial(double[].class, TYPE.PRIMITIVE_DOUBLE_ARRAY, new PrimitiveDoubleArraySerial());
-        addStaticSerial(char[].class, TYPE.PRIMITIVE_CHAR_ARRAY, new PrimitiveCharArraySerial());
-        addStaticSerial(boolean[].class, TYPE.PRIMITIVE_BOOLEAN_ARRAY, new PrimitiveBooleanArraySerial());
+        addStaticInnerSerial(byte[].class, TYPE.PRIMITIVE_BYTE_ARRAY, new PrimitiveByteArraySerial());
+        addStaticInnerSerial(short[].class, TYPE.PRIMITIVE_SHORT_ARRAY, new PrimitiveShortArraySerial());
+        addStaticInnerSerial(int[].class, TYPE.PRIMITIVE_INT_ARRAY, new PrimitiveIntegerArraySerial());
+        addStaticInnerSerial(long[].class, TYPE.PRIMITIVE_LONG_ARRAY, new PrimitiveLongArraySerial());
+        addStaticInnerSerial(float[].class, TYPE.PRIMITIVE_FLOAT_ARRAY, new PrimitiveFloatArraySerial());
+        addStaticInnerSerial(double[].class, TYPE.PRIMITIVE_DOUBLE_ARRAY, new PrimitiveDoubleArraySerial());
+        addStaticInnerSerial(char[].class, TYPE.PRIMITIVE_CHAR_ARRAY, new PrimitiveCharArraySerial());
+        addStaticInnerSerial(boolean[].class, TYPE.PRIMITIVE_BOOLEAN_ARRAY, new PrimitiveBooleanArraySerial());
 
-        addStaticSerial(Byte[].class, TYPE.BYTE_ARRAY, new ByteArraySerial());
-        addStaticSerial(Short[].class, TYPE.SHORT_ARRAY, new ShortArraySerial());
-        addStaticSerial(Integer[].class, TYPE.INTEGER_ARRAY, new IntegerArraySerial());
-        addStaticSerial(Long[].class, TYPE.LONG_ARRAY, new LongArraySerial());
-        addStaticSerial(Float[].class, TYPE.FLOAT_ARRAY, new FloatArraySerial());
-        addStaticSerial(Double[].class, TYPE.DOUBLE_ARRAY, new DoubleArraySerial());
-        addStaticSerial(Character[].class, TYPE.CHARACTER_ARRAY, new CharacterArraySerial());
-        addStaticSerial(Boolean[].class, TYPE.BOOLEAN_ARRAY, new BooleanArraySerial());
+        addStaticInnerSerial(Byte[].class, TYPE.BYTE_ARRAY, new ByteArraySerial());
+        addStaticInnerSerial(Short[].class, TYPE.SHORT_ARRAY, new ShortArraySerial());
+        addStaticInnerSerial(Integer[].class, TYPE.INTEGER_ARRAY, new IntegerArraySerial());
+        addStaticInnerSerial(Long[].class, TYPE.LONG_ARRAY, new LongArraySerial());
+        addStaticInnerSerial(Float[].class, TYPE.FLOAT_ARRAY, new FloatArraySerial());
+        addStaticInnerSerial(Double[].class, TYPE.DOUBLE_ARRAY, new DoubleArraySerial());
+        addStaticInnerSerial(Character[].class, TYPE.CHARACTER_ARRAY, new CharacterArraySerial());
+        addStaticInnerSerial(Boolean[].class, TYPE.BOOLEAN_ARRAY, new BooleanArraySerial());
 
-        addStaticSerial(String.class, TYPE.STRING, new StringSerial());
-        addStaticSerial(Date.class, TYPE.DATE, new DateSerial());
-        addStaticSerial(LocalDate.class, TYPE.LOCAL_DATE, new LocalDateSerial());
-        addStaticSerial(LocalDateTime.class, TYPE.LOCAL_DATE_TIME, new LocalDateTimeSerial());
-        addStaticSerial(BigDecimal.class, TYPE.BIG_DECIMAL, new BigDecimalSerial());
-        addStaticSerial(BigInteger.class, TYPE.BIG_INTEGER, new BigIntegerSerial());
-        addStaticSerial(null, TYPE.NULL, new NullObjectSerial());
+        addStaticInnerSerial(String.class, TYPE.STRING, new StringSerial());
+        addStaticInnerSerial(Date.class, TYPE.DATE, new DateSerial());
+        addStaticInnerSerial(LocalDate.class, TYPE.LOCAL_DATE, new LocalDateSerial());
+        addStaticInnerSerial(LocalDateTime.class, TYPE.LOCAL_DATE_TIME, new LocalDateTimeSerial());
+        addStaticInnerSerial(BigDecimal.class, TYPE.BIG_DECIMAL, new BigDecimalSerial());
+        addStaticInnerSerial(BigInteger.class, TYPE.BIG_INTEGER, new BigIntegerSerial());
+        addStaticInnerSerial(null, TYPE.NULL, new NullObjectSerial());
     }
 
     public DefaultSerial() {
-        addSerial(HashMap.class, TYPE.HASH_MAP, new MapSerial(HashMap.class));
-        addSerial(LinkedHashMap.class, TYPE.LINKED_HASH_MAP, new MapSerial(LinkedHashMap.class));
-        addSerial(Hashtable.class, TYPE.HASH_TABLE, new MapSerial(Hashtable.class));
-        addSerial(ArrayList.class, TYPE.ARRAY_LIST, new CollectionSerial(ArrayList.class));
-        addSerial(LinkedList.class, TYPE.LINKED_LIST, new CollectionSerial(LinkedList.class));
-        addSerial(HashSet.class, TYPE.HASH_SET, new CollectionSerial(HashSet.class));
-        addSerial(LinkedHashSet.class, TYPE.LINKED_HASH_SET, new CollectionSerial(LinkedHashSet.class));
-        addSerial(Object[].class, TYPE.OBJECT_ARRAY, new ObjectArraySerial());
-        addSerial(ChunkFile.class, TYPE.CHUNKED_FILE, new ChunkFileSerial());
+        addInnerSerial(HashMap.class, TYPE.HASH_MAP, new MapSerial(HashMap.class));
+        addInnerSerial(LinkedHashMap.class, TYPE.LINKED_HASH_MAP, new MapSerial(LinkedHashMap.class));
+        addInnerSerial(Hashtable.class, TYPE.HASH_TABLE, new MapSerial(Hashtable.class));
+        addInnerSerial(ArrayList.class, TYPE.ARRAY_LIST, new CollectionSerial(ArrayList.class));
+        addInnerSerial(LinkedList.class, TYPE.LINKED_LIST, new CollectionSerial(LinkedList.class));
+        addInnerSerial(HashSet.class, TYPE.HASH_SET, new CollectionSerial(HashSet.class));
+        addInnerSerial(LinkedHashSet.class, TYPE.LINKED_HASH_SET, new CollectionSerial(LinkedHashSet.class));
+        addInnerSerial(Object[].class, TYPE.OBJECT_ARRAY, new ObjectArraySerial());
 
-        addSerial(Void.class, TYPE.INNER_CUSTOM, new InnerCustomSerial());
+        addInnerSerial(Void.class, TYPE.INNER_CUSTOM, new InnerCustomSerial());
     }
 
-    private static void addStaticSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
+    protected static void addStaticInnerSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
         InnerSerialHandler innerSerialHandler = new InnerSerialHandler(type, serial);
         static_class_serials.put(jClass, innerSerialHandler);
         static_type_serials.put(type.ordinal(), innerSerialHandler);
     }
 
-    private void addSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
+    protected void addInnerSerial(Class<?> jClass, TYPE type, InnerSerial serial) {
         InnerSerialHandler innerSerialHandler = new InnerSerialHandler(type, serial);
         class_serials.put(jClass, innerSerialHandler);
         type_serials.put(type.ordinal(), innerSerialHandler);
     }
 
-    protected void addExtSerial(Class<?> jClass, SerialHandler serialHandler) {
+    protected void addExtInnerSerialHandler(Class<?> jClass, SerialHandler serialHandler) {
         assert serialHandler.getType() < 0;
         ext_class_serials.put(jClass, serialHandler);
         ext_type_serials.put(serialHandler.getType(), serialHandler);
@@ -178,25 +176,25 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
     }
 
     @Override
-    public void serialize(ByteBuf buf, Object value) throws Exception {
-        writeObject(buf, value);
+    public void serialize(ByteBuf buf, Object object) throws Exception {
+        writeObject(buf, object);
     }
 
-    private void writeObject(ByteBuf buf, Object obj) throws Exception {
-        if (obj == null) {
+    protected void writeObject(ByteBuf buf, Object object) throws Exception {
+        if (object == null) {
             buf.writeByte(TYPE.NULL.ordinal());
             return;
         }
-        SerialHandler serialHandler = getSerial(obj.getClass());
+        SerialHandler serialHandler = getSerial(object.getClass());
 
         if (serialHandler == null) {
-            serialHandler = getGeneralSerial(obj);
+            serialHandler = getGeneralSerial(object);
         }
 
         if (serialHandler == null) {
             buf.markWriterIndex();
             buf.writeByte(TYPE.CUSTOM.ordinal());
-            boolean write = writeByCustomSerial(buf, obj);
+            boolean write = writeByCustomSerial(buf, object);
             if (write) {
                 return;
             }
@@ -204,14 +202,14 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         }
 
         if (serialHandler == null) {
-            serialHandler = getInnerCustomSerial(obj);
+            serialHandler = getInnerCustomSerial(object);
         }
 
         if (serialHandler == null) {
-            throw new SerialException("Can not find the serial handler : " + obj);
+            throw new SerialException("Can not find the serial handler : " + object);
         }
         buf.writeByte(serialHandler.getType());
-        serialHandler.getInnerSerial().write(buf, obj);
+        serialHandler.getInnerSerial().write(buf, object);
     }
 
     protected SerialHandler getGeneralSerial(Object obj) {
@@ -251,7 +249,7 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         return readObject(buf);
     }
 
-    private Object readObject(ByteBuf in) throws Exception {
+    protected Object readObject(ByteBuf in) throws Exception {
         byte ordinal = in.readByte();
         if (ordinal >= 0 && ordinal < TYPE.values().length) {
             if (TYPE.values()[ordinal] == TYPE.NULL) {
@@ -848,24 +846,6 @@ public class DefaultSerial extends ChunkFileMessageSerial implements MessageSeri
         @Override
         public Object read(ByteBuf buf) {
             return LocalDateTime.ofInstant(Instant.ofEpochMilli(buf.readLong()), ZoneId.systemDefault());
-        }
-    }
-
-
-    class ChunkFileSerial implements InnerSerial {
-
-        @Override
-        public void write(ByteBuf buf, Object obj) {
-            buf.writeLong(((ChunkFile) obj).getLength());
-            addSerChunkFile((ChunkFile) obj);
-        }
-
-        @Override
-        public Object read(ByteBuf buf) throws IOException {
-            long length = buf.readLong();
-            ChunkFile chunkFile = createChunkFile(length);
-            addDeSerChunkFile(chunkFile);
-            return chunkFile;
         }
     }
 

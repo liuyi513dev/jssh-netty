@@ -1,8 +1,9 @@
 package com.jssh.netty.autoconfigure;
 
-import com.jssh.netty.serial.FileMessageSerialFactory;
+import com.jssh.netty.serial.MessageSerialFactory;
 import com.jssh.netty.server.ClientValidator;
 import com.jssh.netty.server.DefaultServerNettyManager;
+import com.jssh.netty.server.SimpleClientInfo;
 import com.jssh.netty.spring.ActionScanner;
 import com.jssh.netty.spring.ServerEndpointConfigurer;
 import org.springframework.beans.factory.BeanFactory;
@@ -37,13 +38,12 @@ public class JsshNettyServerAutoConfiguration {
 
     @Bean(name = "server", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
-    @ConditionalOnSingleCandidate(ClientValidator.class)
-    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, FileMessageSerialFactory fileMessageSerialFactory) {
+    public DefaultServerNettyManager serverNettyManager(ClientValidator clientValidator, MessageSerialFactory messageSerialFactory) {
         DefaultServerNettyManager manager = new DefaultServerNettyManager();
         manager.setClientValidator(clientValidator);
         manager.setTcpPort(new InetSocketAddress(properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
-        manager.setFileMessageSerialFactory(fileMessageSerialFactory);
+        manager.setMessageSerialFactory(messageSerialFactory);
         return manager;
     }
 
@@ -52,6 +52,12 @@ public class JsshNettyServerAutoConfiguration {
     @ConditionalOnSingleCandidate(DefaultServerNettyManager.class)
     public ActionScanner actionScanner(DefaultServerNettyManager nettyManager) {
         return new ActionScanner(nettyManager);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ClientValidator clientValidator() {
+        return (ctx, param) -> new SimpleClientInfo<>(ctx.channel().id().asShortText());
     }
 
     @Configuration
@@ -74,7 +80,7 @@ public class JsshNettyServerAutoConfiguration {
             List<String> packages = AutoConfigurationPackages.get(this.beanFactory);
             BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(ServerEndpointConfigurer.class);
             builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(packages));
-            builder.addPropertyValue("baseBeanName", "server");
+            builder.addPropertyValue("serverBeanName", "server");
             registry.registerBeanDefinition(ServerEndpointConfigurer.class.getName(), builder.getBeanDefinition());
         }
 

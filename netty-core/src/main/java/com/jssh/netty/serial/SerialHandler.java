@@ -3,6 +3,7 @@ package com.jssh.netty.serial;
 import io.netty.buffer.ByteBuf;
 
 public interface SerialHandler {
+
     int getType();
 
     InnerSerial getInnerSerial();

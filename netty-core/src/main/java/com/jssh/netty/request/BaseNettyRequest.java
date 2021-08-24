@@ -2,6 +2,7 @@ package com.jssh.netty.request;
 
 import com.jssh.netty.server.ClientInfo;
 
+import java.beans.Transient;
 import java.util.Objects;
 
 public abstract class BaseNettyRequest implements NettyRequest {
@@ -119,6 +120,7 @@ public abstract class BaseNettyRequest implements NettyRequest {
     }
 
     @Override
+    @Transient
     public ClientInfo<?> getClientInfo() {
         return clientInfo;
     }

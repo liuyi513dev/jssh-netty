@@ -12,7 +12,13 @@
 </dependency>
 ```
 
-### 配置Config
+### 配置application.properties
+```properties
+#指定Netty监听端口
+jssh.netty.server.port=8090
+```
+
+### 配置客户端身份信息校验
 ```java
 @Configuration
 public class ServerNettyConfig {
@@ -22,17 +28,11 @@ public class ServerNettyConfig {
         return param -> {
             Map paramMap = (Map) param;
             Integer clientId = (Integer) paramMap.get("clientId");
-            //TODO 检查clientId合法性
+            //TODO 校验clientId
             return new SimpleClientInfo(clientId);
         };
     }
 }
-```
-### 配置application.properties
-
-```properties
-#指定Netty监听端口
-jssh.netty.server.port=8090
 ```
 
 ### 服务端向客户端发送消息
@@ -64,7 +64,6 @@ public class ServerMessageService {
 ## 客户端：
 
 ### pom.xml中添加依赖
-
 ```xml
 <dependency>
     <groupId>com.jssh.netty</groupId>
@@ -73,7 +72,14 @@ public class ServerMessageService {
 </dependency>
 ```
 
-### 配置Config
+### 配置application.properties
+```properties
+#指定服务端
+jssh.netty.client.host=127.0.0.1
+jssh.netty.client.port=8090
+```
+
+### 配置当前客户端的身份信息
 ```java
 @Configuration
 public class ClientNettyConfig {
@@ -91,14 +97,6 @@ public class ClientNettyConfig {
 }
 ```
 
-### 配置application.properties
-
-```properties
-#指定服务端
-jssh.netty.client.host=127.0.0.1
-jssh.netty.client.port=8090
-```
-
 ### 客户端向服务端发送消息
 ```java
 /**
@@ -112,7 +110,6 @@ public interface NettyEndpointService {
 ```
 
 ### 客户端接收服务端的消息
-
 ```java
 @Service
 public class ClientMessageService {
@@ -126,7 +123,7 @@ public class ClientMessageService {
 ```
 ***当客户端向服务端发送消息时，直接调用NettyEndpointService中的方法即可。***
 
-## 开启TLS
+## 开启TLS：
 ***默认情况下没有开启TLS，如需开启TLS做如下配置***
 
 ### 服务端配置
@@ -178,39 +175,76 @@ keytool -export -alias "clientkey" -keystore "d:\key\clientkey.jks" -storepass "
 keytool -import -trustcacerts -alias "clientkey" -file "D:\key\clientkey.cer" -storepass "storepass" -keystore "D:\key\serverkey.jks"
 ```
 
-## 自定义序列化
-***如有需要可自定义序列化方法，***
-***比如用json替换系统内置的序列化方式***
-
+## 自定义序列化(建议)：
+用Fastjson替换内置的序列化方式。
+在不传输文件的情况下，建议采用json序列化的方式，性能比内置序列化要好。
 ```java
 @Bean
-public FileMessageSerialFactory fileMessageSerialFactory() {
-    return JsonSerial::new;
+public MessageSerialFactory messageSerialFactory() {
+    JsonSerial jsonSerial = new JsonSerial();
+    return () -> jsonSerial;
 }
 
-static class JsonSerial extends DefaultSerial {
+static class JsonSerial extends StringSerial {
 
     static {
         ParserConfig.getGlobalInstance().setAutoTypeSupport(true);
     }
 
     @Override
-    protected boolean writeByCustomSerial(ByteBuf buf, Object obj) {
-
-        String json = JSONObject.toJSONString(obj, SerializerFeature.WriteClassName);
-        byte[] bytes = json.getBytes(DefaultSerial.default_charset);
-        buf.writeInt(bytes.length);
-        buf.writeBytes(bytes);
-        return true;
+    public String parseString(Object object) {
+        return JSONObject.toJSONString(object, SerializerFeature.WriteClassName);
     }
 
     @Override
-    protected Object readByCustomSerial(ByteBuf buf) {
-        int len = buf.readInt();
-        byte[] bytes = new byte[len];
-        buf.readBytes(bytes);
-        String json = new String(bytes, DefaultSerial.default_charset);
-        return JSONObject.parse(json);
+    public Object parseObject(String string) {
+        return JSONObject.parse(string);
+    }
+}
+```
+
+## 文件传输：
+
+### 定义文件传输对象
+
+```java
+class FileVO {
+
+    private NettyFile nettyFile;
+
+    public NettyFile getNettyFile() {
+        return nettyFile;
+    }
+
+    public void setNettyFile(NettyFile nettyFile) {
+        this.nettyFile = nettyFile;
+    }
+}
+```
+
+### 在Endpoint中定义接口
+```java
+@ClientEndpoint
+public interface NettyEndpointService {
+
+    void sendFileToServer(FileVO fileVO);
+}
+```
+
+### 方法调用
+```java
+nettyEndpointService.sendFileToServer(new FileVO(new NettyFile(new File("文件地址"))));
+```
+
+### 接收端
+```java
+@Service
+public class ServerMessageService {
+
+    @Action
+    public void sendFileToServer(FileVO fileVO) throws Exception {
+        NettyFile nettyFile = fileVO.getNettyFile();
+        nettyFile.saveTo(new File("文件地址"));
     }
 }
 ```

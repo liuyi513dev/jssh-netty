@@ -40,7 +40,7 @@ public class ServerEndpointRegistrar implements ImportBeanDefinitionRegistrar, R
 
         String beanName = attributes.getString("serverBeanName");
         builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(basePackages));
-        builder.addPropertyValue("baseBeanName", beanName);
+        builder.addPropertyValue("serverBeanName", beanName);
         registry.registerBeanDefinition(ServerEndpointConfigurer.class.getName(), builder.getBeanDefinition());
     }
 }

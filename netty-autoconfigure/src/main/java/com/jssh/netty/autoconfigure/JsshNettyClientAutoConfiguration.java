@@ -2,9 +2,10 @@ package com.jssh.netty.autoconfigure;
 
 import com.jssh.netty.client.ClientInfoProvider;
 import com.jssh.netty.client.DefaultClientNettyManager;
-import com.jssh.netty.serial.FileMessageSerialFactory;
+import com.jssh.netty.serial.MessageSerialFactory;
 import com.jssh.netty.spring.ActionScanner;
 import com.jssh.netty.spring.ClientEndpointConfigurer;
+import io.netty.channel.ChannelHandlerContext;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -37,13 +38,12 @@ public class JsshNettyClientAutoConfiguration {
 
     @Bean(name = "client", destroyMethod = "close", initMethod = "start")
     @ConditionalOnMissingBean
-    @ConditionalOnSingleCandidate(ClientInfoProvider.class)
-    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, FileMessageSerialFactory fileMessageSerialFactory) {
+    public DefaultClientNettyManager clientNettyManager(ClientInfoProvider clientInfoProvider, MessageSerialFactory messageSerialFactory) {
         DefaultClientNettyManager manager = new DefaultClientNettyManager();
         manager.setClientInfoProvider(clientInfoProvider);
         manager.setTcpPort(new InetSocketAddress(properties.getHost(), properties.getPort()));
         manager.setConfiguration(properties.getConfiguration());
-        manager.setFileMessageSerialFactory(fileMessageSerialFactory);
+        manager.setMessageSerialFactory(messageSerialFactory);
         return manager;
     }
 
@@ -52,6 +52,18 @@ public class JsshNettyClientAutoConfiguration {
     @ConditionalOnSingleCandidate(DefaultClientNettyManager.class)
     public ActionScanner actionScanner(DefaultClientNettyManager nettyManager) {
         return new ActionScanner(nettyManager);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ClientInfoProvider clientInfoProvider() {
+        return ctx -> null;
+    }
+
+    @Configuration
+    @Import(AutoConfiguredClientEndpointRegistrar.class)
+    @ConditionalOnMissingBean(ClientEndpointConfigurer.class)
+    static class EnableClientEndpointConfiguration {
     }
 
     public static class AutoConfiguredClientEndpointRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar {
@@ -68,7 +80,7 @@ public class JsshNettyClientAutoConfiguration {
             List<String> packages = AutoConfigurationPackages.get(this.beanFactory);
             BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(ClientEndpointConfigurer.class);
             builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(packages));
-            builder.addPropertyValue("baseBeanName", "client");
+            builder.addPropertyValue("clientBeanName", "client");
             registry.registerBeanDefinition(ClientEndpointConfigurer.class.getName(), builder.getBeanDefinition());
         }
 
@@ -76,14 +88,6 @@ public class JsshNettyClientAutoConfiguration {
         public void setBeanFactory(BeanFactory beanFactory) {
             this.beanFactory = beanFactory;
         }
-
-    }
-
-    @Configuration
-    @Import(AutoConfiguredClientEndpointRegistrar.class)
-    @ConditionalOnMissingBean(ClientEndpointConfigurer.class)
-    static class EnableClientEndpointConfiguration {
-
 
     }
 }

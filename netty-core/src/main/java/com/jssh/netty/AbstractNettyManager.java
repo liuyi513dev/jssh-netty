@@ -12,9 +12,10 @@ import com.jssh.netty.handler.ReturnValue;
 import com.jssh.netty.listener.MessageListener;
 import com.jssh.netty.listener.NettyResponse;
 import com.jssh.netty.request.*;
-import com.jssh.netty.serial.DefaultFileMessageSerialFactory;
+import com.jssh.netty.serial.DefaultMessageSerialFactory;
 import com.jssh.netty.serial.ErrorObject;
-import com.jssh.netty.serial.FileMessageSerialFactory;
+import com.jssh.netty.serial.MessageSerial;
+import com.jssh.netty.serial.MessageSerialFactory;
 import com.jssh.netty.ssl.SSLHandler;
 import com.jssh.netty.support.NettyMessageDecoder;
 import com.jssh.netty.support.NettyMessageEncoder;
@@ -81,7 +82,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
     private RequestId requestId = new DefaultRequestId();
 
-    private FileMessageSerialFactory fileMessageSerialFactory = new DefaultFileMessageSerialFactory();
+    private MessageSerialFactory messageSerialFactory = new DefaultMessageSerialFactory();
 
     public void initExecutors() throws Exception {
         this.executor = Executors.newScheduledThreadPool(getConfiguration().getExecutorSize());
@@ -143,9 +144,10 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         pipeline.addLast(new LengthFieldBasedFrameDecoder(getConfiguration().getMaxFrameLength(), 0, 4, 0, 4));
         //处理文件传输
         pipeline.addLast("streamer", new ChunkedWriteHandler());
-        //解码器编码器
-        pipeline.addLast("decoder", new NettyMessageDecoder(fileMessageSerialFactory.createFileMessageSerial()));
-        pipeline.addLast("encoder", new NettyMessageEncoder(fileMessageSerialFactory.createFileMessageSerial()));
+        //编解码器
+        MessageSerial messageSerial = messageSerialFactory.createMessageSerial();
+        pipeline.addLast("decoder", new NettyMessageDecoder(messageSerial));
+        pipeline.addLast("encoder", new NettyMessageEncoder(messageSerial));
         pipeline.addLast("writeTO", new WriteTimeoutHandler(getConfiguration().getWriteTimeout()));
         pipeline.addLast("handler", handler);
     }
@@ -743,11 +745,11 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
         this.configuration = configuration;
     }
 
-    public FileMessageSerialFactory getFileMessageSerialFactory() {
-        return fileMessageSerialFactory;
+    public MessageSerialFactory getMessageSerialFactory() {
+        return messageSerialFactory;
     }
 
-    public void setFileMessageSerialFactory(FileMessageSerialFactory fileMessageSerialFactory) {
-        this.fileMessageSerialFactory = fileMessageSerialFactory;
+    public void setMessageSerialFactory(MessageSerialFactory messageSerialFactory) {
+        this.messageSerialFactory = messageSerialFactory;
     }
 }

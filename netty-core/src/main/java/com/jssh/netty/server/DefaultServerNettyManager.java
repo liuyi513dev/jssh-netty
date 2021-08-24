@@ -132,7 +132,7 @@ public class DefaultServerNettyManager extends AbstractNettyManager implements S
         logger.info("new connection {}", request);
         ClientInfo<?> _clientInfo;
         try {
-            _clientInfo = clientValidator.validate(request.getHeader("clientInfo"));
+            _clientInfo = clientValidator.validate(ctx, request.getHeader("clientInfo"));
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             logger.info("close {}", ctx);

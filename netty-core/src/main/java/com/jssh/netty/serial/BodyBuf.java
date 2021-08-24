@@ -10,9 +10,9 @@ public class BodyBuf {
     private int start;
     private int length;
 
-    private List<ChunkFile> bodyBufFiles;
+    private List<NettyFile> bodyBufFiles;
 
-    public BodyBuf(ByteBuf bodyBuf, int start, int length, List<ChunkFile> bodyBufFiles) {
+    public BodyBuf(ByteBuf bodyBuf, int start, int length, List<NettyFile> bodyBufFiles) {
         this.bodyBuf = bodyBuf.retain();
         this.start = start;
         this.length = length;
@@ -43,11 +43,11 @@ public class BodyBuf {
         this.length = length;
     }
 
-    public List<ChunkFile> getBodyBufFiles() {
+    public List<NettyFile> getBodyBufFiles() {
         return bodyBufFiles;
     }
 
-    public void setBodyBufFiles(List<ChunkFile> bodyBufFiles) {
+    public void setBodyBufFiles(List<NettyFile> bodyBufFiles) {
         this.bodyBufFiles = bodyBufFiles;
     }
 

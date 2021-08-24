@@ -40,7 +40,7 @@ public class ClientEndpointRegistrar implements ImportBeanDefinitionRegistrar, R
 
         String beanName = attributes.getString("clientBeanName");
         builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(basePackages));
-        builder.addPropertyValue("baseBeanName", beanName);
+        builder.addPropertyValue("clientBeanName", beanName);
         registry.registerBeanDefinition(ClientEndpointConfigurer.class.getName(), builder.getBeanDefinition());
     }
 }

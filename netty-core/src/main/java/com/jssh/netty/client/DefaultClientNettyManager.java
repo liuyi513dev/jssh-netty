@@ -106,7 +106,7 @@ public class DefaultClientNettyManager extends AbstractNettyManager implements R
 
     @Override
     public void active(ChannelHandlerContext ctx) {
-        Object clientInfo = clientInfoProvider.clientInfo();
+        Object clientInfo = clientInfoProvider.clientInfo(ctx);
         sendMessage(ctx.channel(), RequestBuilder.builder().setRequestAction(CONNECT_REQUEST).putHeader("clientInfo", clientInfo)
                 .putHeader("clientChannelId", ctx.channel().id().asLongText()).build(), null);
     }

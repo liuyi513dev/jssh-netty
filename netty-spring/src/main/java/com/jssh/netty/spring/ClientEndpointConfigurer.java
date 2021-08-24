@@ -1,8 +1,6 @@
 package com.jssh.netty.spring;
 
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanNameAware;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -13,19 +11,13 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.StringUtils;
 
-public class ClientEndpointConfigurer implements BeanDefinitionRegistryPostProcessor, InitializingBean, ApplicationContextAware, BeanNameAware {
+public class ClientEndpointConfigurer implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     private ApplicationContext applicationContext;
 
-    private String beanName;
-
     private String basePackage;
 
-    private String baseBeanName;
-
-    public String getBeanName() {
-        return beanName;
-    }
+    private String clientBeanName;
 
     public String getBasePackage() {
         return basePackage;
@@ -35,22 +27,12 @@ public class ClientEndpointConfigurer implements BeanDefinitionRegistryPostProce
         this.basePackage = basePackage;
     }
 
-    public String getBaseBeanName() {
-        return baseBeanName;
+    public String getClientBeanName() {
+        return clientBeanName;
     }
 
-    public void setBaseBeanName(String baseBeanName) {
-        this.baseBeanName = baseBeanName;
-    }
-
-    @Override
-    public void setBeanName(String beanName) {
-        this.beanName = beanName;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-
+    public void setClientBeanName(String clientBeanName) {
+        this.clientBeanName = clientBeanName;
     }
 
     @Override
@@ -58,7 +40,7 @@ public class ClientEndpointConfigurer implements BeanDefinitionRegistryPostProce
         ClassPathEndpointScanner scanner = new ClassPathEndpointScanner(beanDefinitionRegistry);
         scanner.setFactoryBean(ClientEndpointFactoryBean.class);
         scanner.setResourceLoader(this.applicationContext);
-        scanner.addProperty("client", new RuntimeBeanReference(baseBeanName));
+        scanner.addProperty("client", new RuntimeBeanReference(clientBeanName));
         scanner.addIncludeFilter(new AnnotationTypeFilter(ClientEndpoint.class));
         scanner.scan(StringUtils.tokenizeToStringArray(this.basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
     }

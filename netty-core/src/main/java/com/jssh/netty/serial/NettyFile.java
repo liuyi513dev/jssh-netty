@@ -7,26 +7,34 @@ import java.nio.channels.FileChannel;
 
 import io.netty.buffer.ByteBuf;
 
-public class ChunkFile {
+public class NettyFile {
 
-	private File srcFile;
-	private long length;
+	private final File srcFile;
+	private final long length;
 
 	private RandomAccessFile outfile;
 	private FileChannel output;
 	private long pos;
 
-	public ChunkFile(String file) {
+	public NettyFile(String file) {
 		this(new File(file));
 	}
 
-	public ChunkFile(File file) {
+	public NettyFile(File file) {
 		this(file, file.length());
 	}
 
-	public ChunkFile(File file, long length) {
+	public NettyFile(File file, long length) {
 		this.srcFile = file;
 		this.length = length;
+	}
+
+	public long getLength() {
+		return length;
+	}
+
+	public File getSrcFile() {
+		return srcFile;
 	}
 
 	public synchronized boolean writeFrom(ByteBuf in) throws IOException {
@@ -36,7 +44,7 @@ public class ChunkFile {
 			output = outfile.getChannel();
 		}
 		if (pos < length) {
-			int read = 0;
+			int read;
 			if (in != null && (read = Math.min(in.readableBytes(), (int) (length - pos))) > 0) {
 				in.readBytes(output, pos, read);
 				pos += read;
@@ -73,30 +81,6 @@ public class ChunkFile {
 			} catch (Exception e) {
 			}
 		}
-	}
-
-	public long getPos() {
-		return pos;
-	}
-
-	public void setPos(long pos) {
-		this.pos = pos;
-	}
-
-	public long getLength() {
-		return length;
-	}
-
-	public void setLength(long length) {
-		this.length = length;
-	}
-
-	public File getSrcFile() {
-		return srcFile;
-	}
-
-	public void setSrcFile(File srcFile) {
-		this.srcFile = srcFile;
 	}
 
 	@Override
