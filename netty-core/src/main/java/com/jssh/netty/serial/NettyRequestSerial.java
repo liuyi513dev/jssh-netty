@@ -9,7 +9,10 @@ import io.netty.handler.stream.ChunkedFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 
 public class NettyRequestSerial extends DefaultSerial {
 
@@ -54,7 +57,6 @@ public class NettyRequestSerial extends DefaultSerial {
         serialize(buf, request.getResponseId());
         serialize(buf, request.getHeaders());
 
-        List<NettyFile> nettyFiles = new LinkedList<>(getSerialNettyFiles());
         if (isBodyBuf && request instanceof BufNettyRequest) {
 
             BodyBuf bodyBuf = ((BufNettyRequest) request).getBodyBuf();
@@ -66,13 +68,13 @@ public class NettyRequestSerial extends DefaultSerial {
             }
             List<NettyFile> bodyBufFiles = bodyBuf.getBodyBufFiles();
             if (bodyBufFiles != null && bodyBufFiles.size() > 0) {
-                nettyFiles.addAll(bodyBufFiles);
+                getSerialNettyFiles().addAll(bodyBufFiles);
             }
         } else {
             serialize(buf, request.getBody());
         }
 
-        for (NettyFile f : nettyFiles) {
+        for (NettyFile f : getSerialNettyFiles()) {
             out.add(new ChunkedFile(f.getSrcFile()));
         }
 
