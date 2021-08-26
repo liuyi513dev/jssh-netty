@@ -1,0 +1,5 @@
+# Auto Configure
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+jssh.netty.rpc.autoconfigure.JsshNettyClientAutoConfiguration,\
+jssh.netty.rpc.autoconfigure.JsshNettyServerAutoConfiguration,\
+jssh.netty.rpc.autoconfigure.MessageSerialFactoryAutoConfiguration

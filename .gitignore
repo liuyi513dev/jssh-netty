@@ -1,4 +1,4 @@
-/netty-core/target/
-/netty-spring/target/
-/netty-autoconfigure/target/
-/netty-starter/target/
+/netty-rpc-core/target/
+/netty-rpc-spring/target/
+/netty-rpc-autoconfigure/target/
+/netty-rpc-starter/target/

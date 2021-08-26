@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jssh.netty</groupId>
-    <artifactId>netty-root</artifactId>
-    <name>netty root</name>
+    <groupId>jssh.netty</groupId>
+    <artifactId>netty-rpc-root</artifactId>
+    <name>netty-rpc root</name>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -32,23 +32,23 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.jssh.netty</groupId>
-                <artifactId>netty-spring</artifactId>
+                <groupId>jssh.netty</groupId>
+                <artifactId>netty-rpc-spring</artifactId>
                 <version>2.0.0-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.jssh.netty</groupId>
-                <artifactId>netty-core</artifactId>
+                <groupId>jssh.netty</groupId>
+                <artifactId>netty-rpc-core</artifactId>
                 <version>2.0.0-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.jssh.netty</groupId>
-                <artifactId>netty-autoconfigure</artifactId>
+                <groupId>jssh.netty</groupId>
+                <artifactId>netty-rpc-autoconfigure</artifactId>
                 <version>2.0.0-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.jssh.netty</groupId>
-                <artifactId>netty-starter</artifactId>
+                <groupId>jssh.netty</groupId>
+                <artifactId>netty-rpc-starter</artifactId>
                 <version>2.0.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
@@ -125,9 +125,9 @@
     </distributionManagement>
 
     <modules>
-        <module>netty-core</module>
-        <module>netty-spring</module>
-        <module>netty-autoconfigure</module>
-        <module>netty-starter</module>
+        <module>netty-rpc-core</module>
+        <module>netty-rpc-spring</module>
+        <module>netty-rpc-autoconfigure</module>
+        <module>netty-rpc-starter</module>
     </modules>
 </project>
