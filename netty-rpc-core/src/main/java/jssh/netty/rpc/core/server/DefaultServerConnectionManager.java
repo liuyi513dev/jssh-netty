@@ -36,9 +36,11 @@ public class DefaultServerConnectionManager implements ServerConnectionManager {
     @Override
     public ClientInfo<?> onConnectionClose(ChannelHandlerContext ctx) {
         ClientInfo<?> clientInfo = ctx.channel().attr(Attributes.CLIENT_INFO).get();
-        ServerConnectionGroup serverConnectionGroup = channelGroup.get(clientInfo);
-        if (serverConnectionGroup != null) {
-            serverConnectionGroup.remove(ctx);
+        if (clientInfo != null) {
+            ServerConnectionGroup serverConnectionGroup = channelGroup.get(clientInfo);
+            if (serverConnectionGroup != null) {
+                serverConnectionGroup.remove(ctx);
+            }
         }
 
         allChannels.remove(ctx.channel().id().asShortText());
@@ -48,9 +50,11 @@ public class DefaultServerConnectionManager implements ServerConnectionManager {
     @Override
     public void close(ChannelHandlerContext ctx) {
         ClientInfo<?> clientInfo = ctx.channel().attr(Attributes.CLIENT_INFO).get();
-        ServerConnectionGroup serverConnectionGroup = channelGroup.get(clientInfo);
-        if (serverConnectionGroup != null) {
-            serverConnectionGroup.close(ctx);
+        if (clientInfo != null) {
+            ServerConnectionGroup serverConnectionGroup = channelGroup.get(clientInfo);
+            if (serverConnectionGroup != null) {
+                serverConnectionGroup.close(ctx);
+            }
         }
 
         allChannels.remove(ctx.channel().id().asShortText());
