@@ -7,6 +7,8 @@ import jssh.netty.rpc.core.request.HeaderList;
 import jssh.netty.rpc.core.request.NettyRequest;
 import jssh.netty.rpc.core.request.RequestBuilder;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 public interface ClientMessageExchange extends NettyManager {
 
     default void sendMessage(NettyRequest request, MessageListener listener) {
@@ -27,24 +29,25 @@ public interface ClientMessageExchange extends NettyManager {
 
     @SuppressWarnings("unchecked")
     default <T> T sendMessageForResult(NettyRequest request) throws NettyException {
-        Object[] r = new Object[2];
+        AtomicReference<Object> responseRef = new AtomicReference<>();
+        AtomicReference<Throwable> expRef = new AtomicReference<>();
         if (!request.getSyn()) {
             throw new IllegalStateException("request syn must be true");
         }
         sendMessage(request, new MessageListener() {
             @Override
             public void onResponse(Object response) {
-                r[1] = response;
+                responseRef.set(response);
             }
 
             @Override
             public void onException(Throwable e) {
-                r[0] = e;
+                expRef.set(e);
             }
         });
-        if (r[0] != null) {
-            throw (r[0] instanceof NettyException ? (NettyException) r[0] : new NettyException((Throwable) r[0]));
+        if (expRef.get() != null) {
+            throw (expRef.get() instanceof NettyException ? (NettyException) expRef.get() : new NettyException(expRef.get()));
         }
-        return (T) r[1];
+        return (T) responseRef.get();
     }
 }

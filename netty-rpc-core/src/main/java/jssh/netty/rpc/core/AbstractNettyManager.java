@@ -41,6 +41,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 //import io.netty.util.ResourceLeakDetector;
 
@@ -349,11 +350,11 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
 
             if (requestContext.isReSendOnNetWorkException() || request.getAck()) {
 
-                Throwable[] exp = new Throwable[1];
+                AtomicReference<Throwable> exp = new AtomicReference<>();
                 requestContext.getListeners().add(new MessageListener() {
                     @Override
                     public void onException(Throwable e) {
-                        exp[0] = e;
+                        exp.set(e);
                     }
                 });
 
@@ -367,18 +368,18 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                         }
                     }
                     retry++;
-                    exp[0] = null;
+                    exp.set(null);
 
                     Channel bindChannel = requestContext.getBindChannel();
 
                     sendRequest(bindChannel != null ? bindChannel : getChannel(request), requestContext.getRequest(),
                             requestContext.getListeners());
 
-                } while ((requestContext.isReSendOnNetWorkException() && exp[0] instanceof NetworkException
-                        || request.getAck() && exp[0] instanceof TimeoutException) && retry < 10);
+                } while ((requestContext.isReSendOnNetWorkException() && exp.get() instanceof NetworkException
+                        || request.getAck() && exp.get() instanceof TimeoutException) && retry < 10);
 
-                if (exp[0] != null) {
-                    throw new NettyException(exp[0]);
+                if (exp.get() != null) {
+                    throw new NettyException(exp.get());
                 }
             } else {
 
@@ -470,13 +471,13 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 channelFuture.sync();
             } catch (Exception e) {
                 clearResultMap(requestId, response);
-                listenerExe.fireException(new NetworkException(e));
+                listenerExe.fireException(e);
                 return;
             }
             boolean success = channelFuture.isSuccess();
             if (!success) {
                 clearResultMap(requestId, response);
-                listenerExe.fireException(new NetworkException(channelFuture.cause()));
+                listenerExe.fireException(channelFuture.cause());
                 return;
             }
             listenerExe.fireComplete();
@@ -509,7 +510,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 boolean success = future.isSuccess();
                 if (!success) {
                     clearResultMap(requestId, response);
-                    listenerExe.fireException(new NetworkException(channelFuture.cause()));
+                    listenerExe.fireException(channelFuture.cause());
                     return;
                 }
                 listenerExe.fireComplete();

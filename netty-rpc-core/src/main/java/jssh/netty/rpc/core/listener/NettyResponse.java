@@ -25,7 +25,7 @@ public class NettyResponse {
 
     private ErrorObject error;
 
-    private NetworkException exception;
+    private Exception exception;
 
     private boolean hasError;
 
@@ -41,7 +41,7 @@ public class NettyResponse {
         this.channelId = channelId;
     }
 
-    public void waitForAck(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
+    public void waitForAck(long timeout, TimeUnit unit) throws Exception {
         ackLatch.await(timeout, unit);
 
         if (hasError) {
@@ -57,7 +57,7 @@ public class NettyResponse {
     }
 
     public Object waitForResponse(long timeout, TimeUnit unit)
-            throws InterruptedException, TimeoutException, NestedException, NetworkException {
+            throws Exception {
 
         responseLatch.await(timeout, unit);
         if (hasError) {
@@ -117,7 +117,7 @@ public class NettyResponse {
         }
     }
 
-    public synchronized void setException(NetworkException exception) {
+    public synchronized void setException(Exception exception) {
         if (hasError) {
             return;
         }
