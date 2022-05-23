@@ -38,6 +38,7 @@ import javax.net.ssl.SSLEngine;
 import java.io.Closeable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -471,13 +472,13 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 channelFuture.sync();
             } catch (Exception e) {
                 clearResultMap(requestId, response);
-                listenerExe.fireException(e);
+                listenerExe.fireException(wrapperException(e));
                 return;
             }
             boolean success = channelFuture.isSuccess();
             if (!success) {
                 clearResultMap(requestId, response);
-                listenerExe.fireException(channelFuture.cause());
+                listenerExe.fireException(wrapperException(channelFuture.cause()));
                 return;
             }
             listenerExe.fireComplete();
@@ -487,7 +488,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                     response.waitForAck(getConfiguration().getResponseTimeoutMillis(), TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
                     clearResultMap(requestId, response);
-                    listenerExe.fireException(e);
+                    listenerExe.fireException(wrapperException(e));
                     return;
                 }
                 listenerExe.fireAck();
@@ -499,7 +500,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                     responseValue = response.waitForResponse(getConfiguration().getResponseTimeoutMillis(), TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
                     clearResultMap(requestId, response);
-                    listenerExe.fireException(e);
+                    listenerExe.fireException(wrapperException(e));
                     return;
                 }
                 listenerExe.fireResponseListener(responseValue);
@@ -510,7 +511,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 boolean success = future.isSuccess();
                 if (!success) {
                     clearResultMap(requestId, response);
-                    listenerExe.fireException(channelFuture.cause());
+                    listenerExe.fireException(wrapperException(channelFuture.cause()));
                     return;
                 }
                 listenerExe.fireComplete();
@@ -521,7 +522,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                                 response.waitForAck(getConfiguration().getResponseTimeoutMillis(), TimeUnit.MILLISECONDS);
                             } catch (Exception e) {
                                 clearResultMap(requestId, response);
-                                listenerExe.fireException(e);
+                                listenerExe.fireException(wrapperException(e));
                                 return;
                             }
                             listenerExe.fireAck();
@@ -533,7 +534,7 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                                 responseValue = response.waitForResponse(getConfiguration().getResponseTimeoutMillis(), TimeUnit.MILLISECONDS);
                             } catch (Exception e) {
                                 clearResultMap(requestId, response);
-                                listenerExe.fireException(e);
+                                listenerExe.fireException(wrapperException(e));
                                 return;
                             }
 
@@ -545,6 +546,21 @@ public abstract class AbstractNettyManager implements NettyManager, Closeable {
                 }
             });
         }
+    }
+
+    public Throwable wrapperException(Throwable e) {
+        if (e instanceof TimeoutException || e instanceof NetworkException) {
+            return e;
+        }
+
+        if (e instanceof ClosedChannelException) {
+            return new NetworkException(e);
+        }
+
+        if (e instanceof io.netty.handler.timeout.TimeoutException) {
+            return new TimeoutException(e);
+        }
+        return e;
     }
 
     public abstract Channel getChannel(NettyRequest request);

@@ -7,11 +7,15 @@ public class TimeoutException extends NettyException {
      */
     private static final long serialVersionUID = 1L;
 
-    public TimeoutException(String code) {
-        super(code);
+    public TimeoutException(String message) {
+        super(message);
     }
 
-    public TimeoutException(String code, Throwable e) {
-        super(code, e);
+    public TimeoutException(String message, Throwable e) {
+        super(message, e);
+    }
+
+    public TimeoutException(Throwable e) {
+        super(e);
     }
 }
